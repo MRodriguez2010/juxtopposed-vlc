@@ -210,7 +210,7 @@ Window {
                     visible: root.category === "general" && !root.search.length
                     width: parent.width
                     spacing: theme.dp(16)
-                    Text { text: qsTr("Appearance"); color: theme.bright; font.pixelSize: theme.dp(16); Layout.topMargin: theme.dp(8) }
+                    Text { text: qsTr("Appearance"); color: theme.settingsHeading; font.pixelSize: theme.dp(16); Layout.topMargin: theme.dp(8) }
                     RedesignPreferenceRow { Layout.fillWidth: true; backend: preferenceStore; optionName: "language"; label: qsTr("Interface language"); scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor }
                     RowLayout {
                         Layout.fillWidth: true
@@ -270,7 +270,7 @@ Window {
                         visible: modelData.rows.some(row => preferenceStore.describe(row[0]).kind !== undefined) || root.category === "controls" && modelData.title === qsTr("Keyboard Shortcuts")
                         Text {
                             topPadding: theme.dp(index === 0 && root.category !== "general" ? 8 : 24); bottomPadding: theme.dp(10)
-                            text: modelData.title; color: theme.bright; font.pixelSize: theme.dp(16)
+                            text: modelData.title; color: theme.settingsHeading; font.pixelSize: theme.dp(16)
                         }
                         ColumnLayout {
                             width: parent.width
@@ -344,7 +344,7 @@ Window {
                         width: parent.width
                         Text {
                             visible: text.length > 0; topPadding: theme.dp(20); bottomPadding: theme.dp(10)
-                            text: modelData.title; color: theme.bright; font.pixelSize: theme.dp(16)
+                            text: modelData.title; color: theme.settingsHeading; font.pixelSize: theme.dp(16)
                         }
                         Repeater {
                             model: modelData.rows

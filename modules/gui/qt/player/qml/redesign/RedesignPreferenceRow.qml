@@ -63,7 +63,7 @@ ColumnLayout {
                 width: Math.min(implicitWidth, parent.width - theme.dp(26))
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.label || root.description.title || ""
-                color: theme.foreground; font.pixelSize: theme.dp(14)
+                color: root.compact ? theme.playerLabel : theme.foreground; font.pixelSize: theme.dp(14)
                 wrapMode: Text.WordWrap
             }
             RedesignIcon {

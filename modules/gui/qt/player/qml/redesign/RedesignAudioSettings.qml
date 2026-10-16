@@ -30,7 +30,7 @@ ColumnLayout {
         Layout.fillWidth: true; Layout.minimumHeight: theme.dp(68)
         Text {
             Layout.fillWidth: true
-            text: qsTr("Stereo Mode"); color: theme.foreground; font.pixelSize: theme.dp(14)
+            text: qsTr("Stereo Mode"); color: theme.playerLabel; font.pixelSize: theme.dp(14)
         }
         RedesignButton {
             objectName: "stereoTestButton"
@@ -75,12 +75,13 @@ ColumnLayout {
     Text {
         objectName: "audioSynchronizationHeading"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(20); Layout.bottomMargin: theme.dp(18)
-        text: qsTr("Synchronization"); color: theme.bright; font.pixelSize: theme.dp(16)
+        text: qsTr("Synchronization"); color: theme.playerHeading; font.pixelSize: theme.dp(16)
     }
     RedesignSettingSlider {
         objectName: "audioDelaySetting"
         Layout.fillWidth: true
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Audio Track Delay"); suffix: " s"; decimals: 3
         from: -10; to: 10; inputFrom: -2147483.648; inputTo: 2147483.647; stepSize: 0.05
         ticks: [-10, 0, 10]; tickSuffix: " s"; sliderTopMargin: 10
@@ -95,12 +96,12 @@ ColumnLayout {
     Text {
         objectName: "audioFiltersHeading"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(20); Layout.bottomMargin: theme.dp(8)
-        text: qsTr("Filters"); color: theme.bright; font.pixelSize: theme.dp(16)
+        text: qsTr("Filters"); color: theme.playerHeading; font.pixelSize: theme.dp(16)
     }
     Text {
         Layout.fillWidth: true; Layout.minimumHeight: theme.dp(36)
         visible: root.equalizerInfo.kind !== undefined
-        text: qsTr("Equalizer"); color: theme.foreground; font.pixelSize: theme.dp(14)
+        text: qsTr("Equalizer"); color: theme.playerLabel; font.pixelSize: theme.dp(14)
         verticalAlignment: Text.AlignVCenter
     }
     RedesignComboBox {
@@ -127,6 +128,7 @@ ColumnLayout {
         objectName: "inlineEqualizerTwoPass"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(8)
         visible: root.equalizerInfo.kind !== undefined
+        labelColor: theme.playerLabel
         label: qsTr("2 Pass"); checked: root.twoPass
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         onToggled: checked => root.backend.stage("equalizer-2pass", checked)

@@ -6,12 +6,15 @@ QtObject {
     property color accentColor: "#d37918"
     property bool lightTheme: false
     readonly property color background: lightTheme ? "#acacac" : "#1b1b1b"
-    readonly property color panel: lightTheme ? "#c3c3c3" : "#101010"
+    readonly property color panel: lightTheme ? "#c3c3c3" : "#0f0f0f"
     readonly property color floatingPanel: lightTheme ? Qt.rgba(195 / 255, 195 / 255, 195 / 255, 0.95) : Qt.rgba(14 / 255, 14 / 255, 14 / 255, 0.95)
     readonly property color field: lightTheme ? "#dedede" : "#090909"
     readonly property color border: lightTheme ? "#969696" : "#292929"
     readonly property color foreground: lightTheme ? "#404040" : "#8f8f8f"
     readonly property color bright: lightTheme ? "#2e2e2e" : "#e5e5e5"
+    readonly property color settingsHeading: lightTheme ? bright : "#c6c6c6"
+    readonly property color playerHeading: lightTheme ? bright : "#969696"
+    readonly property color playerLabel: lightTheme ? foreground : "#6b6b6b"
     readonly property color hover: lightTheme ? "#d5d5d5" : "#292929"
     readonly property color selected: lightTheme ? "#b8b8b8" : "#333333"
     readonly property color accent: accentColor

@@ -9,6 +9,7 @@ RowLayout {
     property color accentColor: "#d37918"
     property bool lightTheme: false
     property string label
+    property color labelColor: theme.foreground
     property string accessibleName: label
     property bool checked: false
     readonly property RedesignTheme theme: RedesignTheme { scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor }
@@ -19,7 +20,7 @@ RowLayout {
     Text {
         Layout.fillWidth: true
         visible: root.label.length > 0
-        text: root.label; color: theme.foreground
+        text: root.label; color: root.labelColor
         font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap
     }
     T.Button {

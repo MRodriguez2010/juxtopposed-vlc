@@ -10,6 +10,7 @@ ColumnLayout {
     property color accentColor: "#d37918"
     property bool lightTheme: false
     property string label
+    property color labelColor: theme.foreground
     property string suffix
     property int decimals: 0
     property real currentValue: 0
@@ -42,7 +43,7 @@ ColumnLayout {
     spacing: theme.dp(8)
     RowLayout {
         Layout.fillWidth: true
-        Text { Layout.fillWidth: true; text: root.label; color: theme.foreground; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
+        Text { Layout.fillWidth: true; text: root.label; color: root.labelColor; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
         T.SpinBox {
             id: valueField
             objectName: "settingValueField"
@@ -152,11 +153,11 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         visible: root.sliderVisible && root.scaleLabelsVisible && root.ticks.length === 0
-        Text { text: root.from + root.suffix; color: theme.foreground; font.pixelSize: theme.dp(11) }
+        Text { text: root.from + root.suffix; color: root.labelColor; font.pixelSize: theme.dp(11) }
         Item { Layout.fillWidth: true }
         RedesignButton { objectName: "settingResetButton"; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; caption: qsTr("Reset"); text: qsTr("Reset %1").arg(root.label); implicitHeight: theme.dp(24); onClicked: root.moved(root.resetValue) }
         Item { Layout.fillWidth: true }
-        Text { text: root.to + root.suffix; color: theme.foreground; font.pixelSize: theme.dp(11) }
+        Text { text: root.to + root.suffix; color: root.labelColor; font.pixelSize: theme.dp(11) }
     }
     Item {
         Layout.fillWidth: true
@@ -171,7 +172,7 @@ ColumnLayout {
                 x: Math.max(0, Math.min(parent.width - width, slider.leftPadding + sliderHandle.width / 2
                     + root.positionFor(modelData) * (slider.availableWidth - sliderHandle.width) - width / 2))
                 text: (root.positiveTickSign && modelData > 0 ? "+" : "") + Number(modelData).toLocaleString(Qt.locale(), 'f', Number.isInteger(modelData) ? 0 : String(modelData).split('.')[1].length) + root.tickSuffix
-                color: theme.foreground; font.pixelSize: theme.dp(11)
+                color: root.labelColor; font.pixelSize: theme.dp(11)
             }
         }
     }
