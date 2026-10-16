@@ -153,6 +153,9 @@ libqt_plugin_la_SOURCES = \
 	dialogs/preferences/expert_view.hpp \
 	dialogs/preferences/redesign_preferences.cpp \
 	dialogs/preferences/redesign_preferences.hpp \
+	player/stereo_test_player.cpp \
+	player/stereo_test_player.hpp \
+	player/stereo_test_signal.hpp \
 	dialogs/preferences/preferences.cpp \
 	dialogs/preferences/preferences.hpp \
 	dialogs/preferences/preferences_widgets.cpp \
@@ -2132,6 +2135,7 @@ check_PROGRAMS += qml_test
 EXTRA_DIST += tests/tst_FSM.qml tests/tst_Redesign.qml tests/tst_RedesignPreferences.qml tests/tst_RedesignPlayback.qml tests/tst_RedesignAudio.qml tests/tst_RedesignVideo.qml tests/tst_RedesignOnboarding.qml tests/tst_RedesignMenu.qml
 EXTRA_DIST += tests/tst_RedesignSubtitleTimeline.qml
 EXTRA_DIST += tests/tst_RedesignTheme.qml
+EXTRA_DIST += tests/test_stereo_test_signal.cpp
 TESTS += tests/tst_RedesignTheme.qml
 EXTRA_DIST += tests/tst_RedesignQueue.qml
 EXTRA_DIST += tests/tst_RedesignBookmarks.qml
