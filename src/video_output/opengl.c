@@ -40,7 +40,21 @@ static const struct vlc_gl_cfg gl_cfg_default = {
 struct vlc_gl_priv_t
 {
     vlc_gl_t gl;
+    vlc_gl_resize_offscreen_cb resize_offscreen;
 };
+
+void vlc_gl_SetOffscreenResizeCallback(vlc_gl_t *gl, vlc_gl_resize_offscreen_cb cb)
+{
+    struct vlc_gl_priv_t *priv = container_of(gl, struct vlc_gl_priv_t, gl);
+    priv->resize_offscreen = cb;
+}
+
+int vlc_gl_ResizeOffscreen(vlc_gl_t *gl, unsigned width, unsigned height)
+{
+    struct vlc_gl_priv_t *priv = container_of(gl, struct vlc_gl_priv_t, gl);
+    return priv->resize_offscreen ? priv->resize_offscreen(gl, width, height)
+                                  : VLC_ENOTSUP;
+}
 
 static int vlc_gl_start(void *func, bool forced, va_list ap)
 {
@@ -49,6 +63,10 @@ static int vlc_gl_start(void *func, bool forced, va_list ap)
     unsigned width = va_arg(ap, unsigned);
     unsigned height = va_arg(ap, unsigned);
     const struct vlc_gl_cfg *gl_cfg = va_arg(ap, const struct vlc_gl_cfg *);
+
+    /* A failed provider probe must not leave a callback for the next one. */
+    struct vlc_gl_priv_t *priv = container_of(gl, struct vlc_gl_priv_t, gl);
+    priv->resize_offscreen = NULL;
 
     int ret = activate(gl, width, height, gl_cfg);
     if (ret)

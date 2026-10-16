@@ -4,6 +4,32 @@
 
 typedef void (APIENTRY *offscreen_read_buffer_fn)(GLenum);
 
+static inline bool offscreen_ValidSize(unsigned width, unsigned height)
+{
+    return width > 0 && height > 0 && width <= INT_MAX / 4 && height <= INT_MAX
+        && (uint64_t)width * height <= PTRDIFF_MAX / 4;
+}
+
+static inline bool offscreen_AllocBuffers(const opengl_vtable_t *vt,
+                                          GLuint *buffers, unsigned count,
+                                          unsigned width, unsigned height)
+{
+    GLint previous;
+    vt->GetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous);
+    vt->GenBuffers(count, buffers);
+    for (unsigned i = 0; i < count; ++i)
+    {
+        vt->BindBuffer(GL_PIXEL_PACK_BUFFER, buffers[i]);
+        vt->BufferData(GL_PIXEL_PACK_BUFFER, (size_t)width * height * 4, NULL,
+                       GL_STREAM_READ);
+    }
+    vt->BindBuffer(GL_PIXEL_PACK_BUFFER, previous);
+    if (vt->GetError() == GL_NO_ERROR)
+        return true;
+    vt->DeleteBuffers(count, buffers);
+    return false;
+}
+
 static inline bool offscreen_CanRead(const opengl_vtable_t *vt,
                                       bool default_framebuffer)
 {
@@ -41,7 +67,12 @@ offscreen_ReadDefault(const opengl_vtable_t *vt,
     vt->BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     GLint previous_read_buffer;
     vt->GetIntegerv(GL_READ_BUFFER, &previous_read_buffer);
-    read_buffer(default_buffer);
+    /* A new single-buffered EGL pbuffer can report GL_FRONT even for ES,
+     * where glReadBuffer(GL_FRONT) is not a valid setter. Keep readable default
+     * selections intact; only temporarily enable reading when it is disabled. */
+    const bool disabled = previous_read_buffer == GL_NONE;
+    if (disabled)
+        read_buffer(default_buffer);
     vt->BindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
     if (mapped)
         vt->UnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -58,7 +89,8 @@ offscreen_ReadDefault(const opengl_vtable_t *vt,
     vt->PixelStorei(GL_PACK_SKIP_ROWS, skip_rows);
     vt->PixelStorei(GL_PACK_SKIP_PIXELS, skip_pixels);
     vt->BindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
-    read_buffer(previous_read_buffer);
+    if (disabled)
+        read_buffer(previous_read_buffer);
     vt->BindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
     return pixels;
 }

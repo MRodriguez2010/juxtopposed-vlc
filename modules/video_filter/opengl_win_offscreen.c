@@ -61,6 +61,7 @@ struct vlc_gl_pbuffer
     HPBUFFERARB             hbuffer;
     HDC                     pixelBufferDC;
     HGLRC                   hGLRC;
+    int                     pixel_format;
 
     struct wgl_vt           wgl_vt;
     struct vlc_gl_api       api;
@@ -288,11 +289,69 @@ static int LoadWGLExt(vlc_gl_t *gl, struct wgl_vt *wgl_vt)
     return VLC_SUCCESS;
 }
 
+static int Resize(vlc_gl_t *gl, unsigned width, unsigned height)
+{
+    struct vlc_gl_pbuffer *sys = gl->sys;
+    const opengl_vtable_t *vt = &sys->api.vt;
+    if (!sys->current || !offscreen_ValidSize(width, height))
+        return VLC_EGENERIC;
+    if (width == sys->fmt_out.i_width && height == sys->fmt_out.i_height)
+        return VLC_SUCCESS;
+
+    vlc_mutex_lock(&sys->lock);
+    for (unsigned i = 0; i < BUFFER_COUNT; ++i)
+        if (sys->picture_contexts[i].rc != 0)
+        {
+            vlc_mutex_unlock(&sys->lock);
+            return VLC_EGENERIC;
+        }
+    vlc_mutex_unlock(&sys->lock);
+
+    HPBUFFERARB surface = sys->wgl_vt.CreatePbufferARB(sys->pixelBufferDC,
+                                                      sys->pixel_format,
+                                                      width, height, NULL);
+    if (surface == NULL)
+        return VLC_EGENERIC;
+    HDC dc = sys->wgl_vt.GetPbufferDCARB(surface);
+    if (dc == NULL)
+    {
+        sys->wgl_vt.DestroyPbufferARB(surface);
+        return VLC_EGENERIC;
+    }
+    GLuint buffers[BUFFER_COUNT] = {0};
+    if (!offscreen_AllocBuffers(vt, buffers, BUFFER_COUNT, width, height))
+        goto error;
+    if (!wglMakeCurrent(dc, sys->hGLRC))
+    {
+        /* WGL clears the current context on failure. Restore it before
+         * deleting the temporary buffers and returning to the renderer. */
+        if (MakeCurrentBare(gl) == VLC_SUCCESS)
+            vt->DeleteBuffers(BUFFER_COUNT, buffers);
+        goto error;
+    }
+
+    sys->wgl_vt.ReleasePbufferDCARB(sys->hbuffer, sys->pixelBufferDC);
+    sys->wgl_vt.DestroyPbufferARB(sys->hbuffer);
+    sys->hbuffer = surface;
+    sys->pixelBufferDC = dc;
+    vt->DeleteBuffers(BUFFER_COUNT, sys->pixelbuffers);
+    memcpy(sys->pixelbuffers, buffers, sizeof(buffers));
+    for (unsigned i = 0; i < BUFFER_COUNT; ++i)
+        sys->picture_contexts[i].buffer_mapping = NULL;
+    sys->current_flip = BUFFER_COUNT - 1;
+    sys->fmt_out.i_width = sys->fmt_out.i_visible_width = width;
+    sys->fmt_out.i_height = sys->fmt_out.i_visible_height = height;
+    return VLC_SUCCESS;
+error:
+    sys->wgl_vt.ReleasePbufferDCARB(surface, dc);
+    sys->wgl_vt.DestroyPbufferARB(surface);
+    return VLC_EGENERIC;
+}
+
 static int OpenCommon(vlc_gl_t *gl, unsigned width, unsigned height,
                       const struct vlc_gl_cfg *gl_cfg, bool default_framebuffer)
 {
-    if (width == 0 || height == 0 || width > INT_MAX / 4 || height > INT_MAX
-        || (uint64_t)width * height > PTRDIFF_MAX / 4)
+    if (!offscreen_ValidSize(width, height))
         return VLC_EGENERIC;
 
     if (gl_cfg->need_alpha)
@@ -427,6 +486,7 @@ static int OpenCommon(vlc_gl_t *gl, unsigned width, unsigned height,
         goto error2;
     }
 
+    sys->pixel_format = pixelFormats[0];
     sys->hbuffer = sys->wgl_vt.CreatePbufferARB(tmpScreenDC, pixelFormats[0], width, height, NULL);
     if (sys->hbuffer == NULL)
     {
@@ -515,6 +575,8 @@ static int OpenCommon(vlc_gl_t *gl, unsigned width, unsigned height,
     wglDeleteContext(tmpGLRC);
     ReleaseDC(tmpWindow, tmpScreenDC);
     DestroyWindow(tmpWindow);
+    if (default_framebuffer)
+        vlc_gl_SetOffscreenResizeCallback(gl, Resize);
 
     return VLC_SUCCESS;
 

@@ -180,6 +180,25 @@ VLC_API vlc_gl_t *vlc_gl_CreateOffscreen(vlc_object_t *parent,
 
 VLC_API void vlc_gl_Delete(vlc_gl_t *);
 
+typedef int (*vlc_gl_resize_offscreen_cb)(vlc_gl_t *, unsigned, unsigned);
+
+/** Register an offscreen provider's resize callback during activation.
+ *
+ * Stored by the core so older providers remain compatible without extending
+ * their operations table. A failed resize must retain the previous canvas and
+ * rendering context. The caller makes the context current before invoking it.
+ */
+VLC_API void vlc_gl_SetOffscreenResizeCallback(vlc_gl_t *, vlc_gl_resize_offscreen_cb);
+
+/** Resize an offscreen canvas without replacing its rendering context.
+ *
+ * The context must be current, and all pictures from earlier swaps must be
+ * released. Calls must be serialized with rendering, swaps and destruction.
+ * Returns VLC_SUCCESS on success, VLC_ENOTSUP for a provider without a resize
+ * callback, or another error if the previous canvas must be kept.
+ */
+VLC_API int vlc_gl_ResizeOffscreen(vlc_gl_t *, unsigned width, unsigned height);
+
 static inline int vlc_gl_MakeCurrent(vlc_gl_t *gl)
 {
     return gl->ops->make_current(gl);

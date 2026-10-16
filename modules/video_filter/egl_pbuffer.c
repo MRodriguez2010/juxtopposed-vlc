@@ -72,6 +72,7 @@ struct vlc_gl_pbuffer
     EGLDisplay display;
     EGLSurface surface;
     EGLContext context;
+    EGLConfig config;
 
     bool current;
     bool default_framebuffer;
@@ -183,6 +184,7 @@ static int InitEGL(vlc_gl_t *gl, int opengl_api, unsigned width, unsigned height
         msg_Err (gl, "cannot choose EGL configuration");
         goto error;
     }
+    sys->config = cfgv[0];
 
     if (need_surface)
     {
@@ -375,11 +377,57 @@ static void Close( vlc_gl_t *gl )
     vlc_egl_display_Delete(sys->vlc_display);
 }
 
+static int Resize(vlc_gl_t *gl, unsigned width, unsigned height)
+{
+    struct vlc_gl_pbuffer *sys = gl->sys;
+    const opengl_vtable_t *vt = &sys->api.vt;
+    if (!sys->current || !offscreen_ValidSize(width, height))
+        return VLC_EGENERIC;
+    if (width == sys->fmt_out.i_width && height == sys->fmt_out.i_height)
+        return VLC_SUCCESS;
+
+    vlc_mutex_lock(&sys->lock);
+    for (unsigned i = 0; i < BUFFER_COUNT; ++i)
+        if (sys->picture_contexts[i].rc != 0)
+        {
+            vlc_mutex_unlock(&sys->lock);
+            return VLC_EGENERIC;
+        }
+    vlc_mutex_unlock(&sys->lock);
+
+    const EGLint attrs[] = {EGL_WIDTH, width, EGL_HEIGHT, height, EGL_NONE};
+    EGLSurface surface = eglCreatePbufferSurface(sys->display, sys->config, attrs);
+    if (surface == EGL_NO_SURFACE)
+        return VLC_EGENERIC;
+    GLuint buffers[BUFFER_COUNT] = {0};
+    if (!offscreen_AllocBuffers(vt, buffers, BUFFER_COUNT, width, height))
+    {
+        eglDestroySurface(sys->display, surface);
+        return VLC_EGENERIC;
+    }
+    if (!eglMakeCurrent(sys->display, surface, surface, sys->context))
+    {
+        vt->DeleteBuffers(BUFFER_COUNT, buffers);
+        eglDestroySurface(sys->display, surface);
+        return VLC_EGENERIC;
+    }
+
+    eglDestroySurface(sys->display, sys->surface);
+    sys->surface = surface;
+    vt->DeleteBuffers(BUFFER_COUNT, sys->pixelbuffers);
+    memcpy(sys->pixelbuffers, buffers, sizeof(buffers));
+    for (unsigned i = 0; i < BUFFER_COUNT; ++i)
+        sys->picture_contexts[i].buffer_mapping = NULL;
+    sys->current_flip = BUFFER_COUNT - 1;
+    sys->fmt_out.i_width = sys->fmt_out.i_visible_width = width;
+    sys->fmt_out.i_height = sys->fmt_out.i_visible_height = height;
+    return VLC_SUCCESS;
+}
+
 static int OpenCommon(vlc_gl_t *gl, unsigned width, unsigned height,
                       const struct vlc_gl_cfg *gl_cfg, bool default_framebuffer)
 {
-    if (width == 0 || height == 0 || width > INT_MAX / 4 || height > INT_MAX
-        || (uint64_t)width * height > PTRDIFF_MAX / 4)
+    if (!offscreen_ValidSize(width, height))
         return VLC_EGENERIC;
 
     if (gl_cfg->need_alpha)
@@ -491,6 +539,8 @@ static int OpenCommon(vlc_gl_t *gl, unsigned width, unsigned height,
     if (vt->GetError() != GL_NO_ERROR)
         goto error2;
     eglMakeCurrent(sys->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (default_framebuffer)
+        vlc_gl_SetOffscreenResizeCallback(gl, Resize);
 
     return VLC_SUCCESS;
 

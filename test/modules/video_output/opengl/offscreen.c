@@ -64,6 +64,7 @@ static void check_external_context(void)
 #endif
 
 typedef void (APIENTRY *scissor_fn)(GLint, GLint, GLsizei, GLsizei);
+typedef void (APIENTRY *read_buffer_fn)(GLenum);
 const char vlc_module_name[] = "test_offscreen";
 
 static void check_integer(const opengl_vtable_t *vt, GLenum key, GLint expected)
@@ -89,6 +90,22 @@ static void check_picture(const picture_t *picture, unsigned width, unsigned hei
             assert(pixel[2] == ((frame & 1) ? 255 : 0));
             assert(pixel[3] == 255);
         }
+}
+
+static void draw_frame(const opengl_vtable_t *vt, scissor_fn scissor,
+                       unsigned width, unsigned height, unsigned frame)
+{
+    vt->Viewport(0, 0, width, height);
+    vt->Enable(GL_SCISSOR_TEST);
+    for (unsigned quadrant = 0; quadrant < 4; ++quadrant)
+    {
+        bool right = quadrant & 1, top = quadrant & 2;
+        unsigned x = right ? width / 2 : 0, y = top ? height / 2 : 0;
+        scissor(x, y, right ? width - x : width / 2, top ? height - y : height / 2);
+        vt->ClearColor(right ? 0.f : 1.f, top ? 1.f : 0.f, (frame & 1) ? 1.f : 0.f, 1.f);
+        vt->Clear(GL_COLOR_BUFFER_BIT);
+    }
+    vt->Disable(GL_SCISSOR_TEST);
 }
 
 static bool check_context(vlc_object_t *root, unsigned width, unsigned height,
@@ -117,6 +134,7 @@ static bool check_context(vlc_object_t *root, unsigned width, unsigned height,
     const opengl_vtable_t *vt = &api.vt;
     scissor_fn scissor = vlc_gl_GetProcAddress(gl, "glScissor");
     assert(scissor != NULL);
+    read_buffer_fn read_buffer = vlc_gl_GetProcAddress(gl, "glReadBuffer");
     GLint target;
     vt->GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &target);
     assert(default_framebuffer ? target == 0 : target != 0);
@@ -130,20 +148,12 @@ static bool check_context(vlc_object_t *root, unsigned width, unsigned height,
     {
         if (default_framebuffer)
             vt->BindFramebuffer(GL_FRAMEBUFFER, 0);
-        vt->Viewport(0, 0, width, height);
-        vt->Enable(GL_SCISSOR_TEST);
-        for (unsigned quadrant = 0; quadrant < 4; ++quadrant)
-        {
-            bool right = quadrant & 1, top = quadrant & 2;
-            unsigned x = right ? width / 2 : 0, y = top ? height / 2 : 0;
-            scissor(x, y, right ? width - x : width / 2, top ? height - y : height / 2);
-            vt->ClearColor(right ? 0.f : 1.f, top ? 1.f : 0.f, (frame & 1) ? 1.f : 0.f, 1.f);
-            vt->Clear(GL_COLOR_BUFFER_BIT);
-        }
-        vt->Disable(GL_SCISSOR_TEST);
+        draw_frame(vt, scissor, width, height, frame);
         if (default_framebuffer)
         {
             /* Engines may leave unrelated read targets and nondefault packing. */
+            assert(read_buffer != NULL);
+            read_buffer(GL_NONE);
             vt->BindFramebuffer(GL_FRAMEBUFFER, renderer_fbo);
             vt->BindBuffer(GL_PIXEL_PACK_BUFFER, renderer_pbo);
             vt->PixelStorei(GL_PACK_ALIGNMENT, 8);
@@ -159,6 +169,9 @@ static bool check_context(vlc_object_t *root, unsigned width, unsigned height,
         {
             check_integer(vt, GL_DRAW_FRAMEBUFFER_BINDING, renderer_fbo);
             check_integer(vt, GL_READ_FRAMEBUFFER_BINDING, renderer_fbo);
+            vt->BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+            check_integer(vt, GL_READ_BUFFER, GL_NONE);
+            vt->BindFramebuffer(GL_READ_FRAMEBUFFER, renderer_fbo);
             check_integer(vt, GL_PIXEL_PACK_BUFFER_BINDING, renderer_pbo);
             check_integer(vt, GL_PACK_ALIGNMENT, 8);
             check_integer(vt, GL_PACK_ROW_LENGTH, width + 9);
@@ -178,8 +191,67 @@ static bool check_context(vlc_object_t *root, unsigned width, unsigned height,
         vlc_gl_ReleaseCurrent(gl);
         assert(vlc_gl_MakeCurrent(gl) == VLC_SUCCESS);
     }
+    if (default_framebuffer)
+    {
+        assert(vlc_gl_ResizeOffscreen(gl, width + 6, height + 2) != VLC_SUCCESS);
+        for (unsigned slot = 0; slot < 2; ++slot)
+            check_picture(held[slot], width, height, held_frame[slot]);
+    }
     for (unsigned slot = 0; slot < 2; ++slot)
         picture_Release(held[slot]);
+    if (default_framebuffer)
+    {
+        GLuint texture;
+        const uint8_t color[] = {13, 71, 219, 255};
+        vt->GenTextures(1, &texture);
+        vt->BindTexture(GL_TEXTURE_2D, texture);
+        vt->TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA,
+                       GL_UNSIGNED_BYTE, color);
+        vt->BindFramebuffer(GL_FRAMEBUFFER, renderer_fbo);
+        vt->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                 GL_TEXTURE_2D, texture, 0);
+        assert(vt->CheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+        assert(vlc_gl_ResizeOffscreen(gl, 0, height) != VLC_SUCCESS);
+        assert(vlc_gl_ResizeOffscreen(gl, UINT_MAX, height) != VLC_SUCCESS);
+        const unsigned sizes[][2] = {
+            {width + 6, height + 2}, {width * 2 + 1, height * 2 + 1}, {width, height},
+        };
+        for (unsigned i = 0; i < ARRAY_SIZE(sizes); ++i)
+        {
+            vt->BindFramebuffer(GL_FRAMEBUFFER, renderer_fbo);
+            vt->BindBuffer(GL_PIXEL_PACK_BUFFER, renderer_pbo);
+            vt->Viewport(3, 4, 5, 6);
+            assert(vlc_gl_ResizeOffscreen(gl, sizes[i][0], sizes[i][1]) == VLC_SUCCESS);
+            check_integer(vt, GL_READ_FRAMEBUFFER_BINDING, renderer_fbo);
+            check_integer(vt, GL_DRAW_FRAMEBUFFER_BINDING, renderer_fbo);
+            check_integer(vt, GL_PIXEL_PACK_BUFFER_BINDING, renderer_pbo);
+            GLint viewport[4];
+            vt->GetIntegerv(GL_VIEWPORT, viewport);
+            assert(viewport[0] == 3 && viewport[1] == 4 && viewport[2] == 5 && viewport[3] == 6);
+            assert(vt->CheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+            /* The renderer's texture must retain its contents across resizes. */
+            vt->BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+            vt->PixelStorei(GL_PACK_ALIGNMENT, 1);
+            vt->PixelStorei(GL_PACK_ROW_LENGTH, 0);
+            vt->PixelStorei(GL_PACK_SKIP_ROWS, 0);
+            vt->PixelStorei(GL_PACK_SKIP_PIXELS, 0);
+            uint8_t pixel[4];
+            vt->ReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            assert(!memcmp(pixel, color, sizeof(color)));
+            assert(vt->GetError() == GL_NO_ERROR);
+            vt->BindFramebuffer(GL_FRAMEBUFFER, 0);
+            draw_frame(vt, scissor, sizes[i][0], sizes[i][1], i);
+            assert(vt->GetError() == GL_NO_ERROR);
+            picture_t *picture = vlc_gl_SwapOffscreen(gl);
+            assert(vt->GetError() == GL_NO_ERROR);
+            check_picture(picture, sizes[i][0], sizes[i][1], i);
+            picture_Release(picture);
+        }
+        vt->DeleteTextures(1, &texture);
+        fprintf(stderr, "offscreen resize preserves context resources and rejects held pictures\n");
+    }
+    else
+        assert(vlc_gl_ResizeOffscreen(gl, width + 6, height + 2) == VLC_ENOTSUP);
     vt->DeleteBuffers(1, &renderer_pbo);
     vt->DeleteFramebuffers(1, &renderer_fbo);
     assert(vt->GetError() == GL_NO_ERROR);
