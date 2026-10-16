@@ -60,11 +60,11 @@ Item {
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         text: root.selectedName
         enabled: !root.backend.pendingPlayerPreset
-        background: Rectangle { color: root.theme.field; radius: root.theme.dp(4); border.color: field.visualFocus ? root.theme.accent : root.theme.border }
+        background: Rectangle { color: root.theme.field; radius: root.theme.dp(6); border.width: field.visualFocus ? 1 : 0; border.color: root.theme.accent }
         contentItem: RowLayout {
             anchors.fill: parent; anchors.leftMargin: root.theme.dp(14); anchors.rightMargin: root.theme.dp(14)
             Text { Layout.fillWidth: true; text: root.selectedName; color: root.theme.foreground; font.pixelSize: root.theme.dp(14); elide: Text.ElideRight }
-            RedesignIcon { sourceSize: Qt.size(root.theme.dp(20) * Screen.devicePixelRatio, root.theme.dp(20) * Screen.devicePixelRatio); Layout.preferredWidth: root.theme.dp(20); Layout.preferredHeight: root.theme.dp(20); name: "chevron-down"; rotation: dropdown.visible ? 180 : 0; color: root.theme.foreground }
+            RedesignIcon { sourceSize: Qt.size(root.theme.dp(20) * Screen.devicePixelRatio, root.theme.dp(20) * Screen.devicePixelRatio); Layout.preferredWidth: root.theme.dp(20); Layout.preferredHeight: root.theme.dp(20); name: "chevron-down"; rotation: dropdown.visible ? 0 : 180; color: root.theme.foreground }
         }
         onClicked: dropdown.visible ? dropdown.close() : dropdown.open()
     }
@@ -73,10 +73,10 @@ Item {
         objectName: "playerPresetMenu"
         y: -height - root.theme.dp(8)
         width: root.width
-        height: Math.min(list.count * root.theme.dp(48) + padding * 2, root.theme.dp(340), root.mapToItem(C.Overlay.overlay, 0, 0).y - root.theme.dp(12))
-        padding: root.theme.dp(4)
+        height: Math.min(list.count * root.theme.dp(40) + padding * 2, root.theme.dp(340), root.mapToItem(C.Overlay.overlay, 0, 0).y - root.theme.dp(12))
+        padding: root.theme.dp(1)
         focus: true
-        background: Rectangle { color: root.theme.background; radius: root.theme.dp(6); border.color: root.theme.border }
+        background: Rectangle { color: root.lightTheme ? root.theme.background : "#191919"; radius: root.theme.dp(6) }
         onOpened: {
             list.currentIndex = Math.max(0, list.model.findIndex(row => row.id === root.selectedId && row.action !== "create"))
             list.forceActiveFocus()
@@ -107,17 +107,24 @@ Item {
                 required property var modelData
                 required property int index
                 objectName: modelData.action === "create" ? "playerPresetCreate" : modelData.id ? "playerPreset_" + index : "playerPresetDefault"
-                width: list.width; height: root.theme.dp(48)
+                width: list.width; height: root.theme.dp(40)
+                leftPadding: root.theme.dp(16); rightPadding: root.theme.dp(18)
                 text: modelData.name
                 hoverEnabled: true
                 highlighted: list.currentIndex === index
                 onHoveredChanged: if (hovered) list.currentIndex = index
                 onClicked: root.activate(modelData)
-                background: Rectangle { radius: root.theme.dp(4); color: row.highlighted ? root.theme.hover : "transparent" }
+                background: Rectangle {
+                    x: root.theme.dp(1); y: x
+                    width: row.width - 2 * x; height: row.height - 2 * y
+                    radius: root.theme.dp(4)
+                    color: row.highlighted ? root.lightTheme ? root.theme.hover : "#1f1f1f" : "transparent"
+                }
                 contentItem: RowLayout {
                     spacing: root.theme.dp(10)
                     Item {
-                        Layout.preferredWidth: root.theme.dp(30); Layout.fillHeight: true
+                        Layout.preferredWidth: root.theme.dp(24); Layout.fillHeight: true
+                        visible: row.modelData.action === "create" || !!row.modelData.id
                         RedesignButton {
                             anchors.centerIn: parent; width: root.theme.dp(30); height: width
                             visible: !!row.modelData.id
@@ -126,9 +133,9 @@ Item {
                             text: qsTr("Preset actions for %1").arg(row.modelData.name)
                             onClicked: list.openActions(row.modelData, row)
                         }
-                        RedesignIcon { anchors.centerIn: parent; width: root.theme.dp(20); height: width; visible: row.modelData.action === "create"; name: "add"; color: root.theme.foreground }
+                        RedesignIcon { anchors.centerIn: parent; width: root.theme.dp(20); height: width; visible: row.modelData.action === "create"; name: "add"; color: root.theme.playerLabel }
                     }
-                    Text { Layout.fillWidth: true; text: row.modelData.name; font.pixelSize: root.theme.dp(14); color: root.theme.foreground; elide: Text.ElideRight }
+                    Text { Layout.fillWidth: true; text: row.modelData.name; font.pixelSize: root.theme.dp(14); color: row.modelData.action === "create" ? root.theme.playerLabel : root.theme.foreground; elide: Text.ElideRight }
                     RedesignIcon { objectName: "presetSelectionMark" + row.index; sourceSize: Qt.size(root.theme.dp(20) * Screen.devicePixelRatio, root.theme.dp(20) * Screen.devicePixelRatio); Layout.preferredWidth: root.theme.dp(20); Layout.preferredHeight: root.theme.dp(20); name: "check"; color: root.theme.accent; opacity: row.modelData.action !== "create" && row.modelData.id === root.selectedId ? 1 : 0 }
                 }
             }
