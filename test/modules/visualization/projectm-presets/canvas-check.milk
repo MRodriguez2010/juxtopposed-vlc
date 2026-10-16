@@ -1,0 +1,25 @@
+[preset00]
+// SPDX-License-Identifier: LGPL-2.1-or-later
+// Fixed border and audio wave make canvas checks independent of preset choice.
+fRating=3
+fGammaAdj=1
+fDecay=0.95
+nWaveMode=0
+fWaveAlpha=1
+fWaveScale=1
+bAdditiveWaves=1
+bMaximizeWaveColor=1
+bModWaveAlphaByVolume=0
+wave_r=0.2
+wave_g=0.8
+wave_b=1
+wave_x=0.5
+wave_y=0.5
+ob_size=0.02
+ob_r=1
+ob_g=0.2
+ob_b=0.1
+ob_a=1
+zoom=1
+rot=0
+warp=0

@@ -9,6 +9,7 @@
 #include <vlc_opengl.h>
 #include <vlc_picture_pool.h>
 #include <vlc_vout.h>
+#include <vlc_window.h>
 #include "size.h"
 
 struct visualization_gl
@@ -19,7 +20,7 @@ struct visualization_gl
     video_format_t format;
     picture_pool_t *pool;
     vlc_mutex_t lock;
-    bool stopped, display_ready, context_failed;
+    bool stopped, display_ready, context_failed, native_surface;
     const char *width_option, *height_option;
     unsigned failed_width, failed_height;
     vlc_tick_t retry;
@@ -29,14 +30,14 @@ static inline bool visualization_gl_GetSize(struct visualization_gl *vis,
                                             unsigned *width, unsigned *height)
 {
     if (visualization_GetSize(VLC_OBJECT(vis->filter), width, height))
-        return true;
+        return *width <= INT_MAX / 4 && (uint64_t)*width * *height <= PTRDIFF_MAX / 4;
     int64_t w = var_InheritInteger(vis->filter, vis->width_option);
     int64_t h = var_InheritInteger(vis->filter, vis->height_option);
     if (w <= 0 || h <= 0 || w > INT_MAX / 4 || h > INT_MAX)
         return false;
     *width = w;
     *height = h;
-    return true;
+    return (uint64_t)*width * *height <= PTRDIFF_MAX / 4;
 }
 
 static inline void visualization_gl_Delete(struct visualization_gl *vis)
@@ -44,7 +45,12 @@ static inline void visualization_gl_Delete(struct visualization_gl *vis)
     if (vis->pool)
         picture_pool_Release(vis->pool);
     if (vis->gl)
-        vlc_gl_Delete(vis->gl);
+    {
+        if (vis->native_surface)
+            vlc_gl_surface_Destroy(vis->gl);
+        else
+            vlc_gl_Delete(vis->gl);
+    }
     video_format_Clean(&vis->format);
     free(vis);
 }
@@ -67,6 +73,39 @@ visualization_gl_New(filter_t *filter, const char *width_option,
     vis->gl = vlc_gl_CreateOffscreen(VLC_OBJECT(filter), NULL, width, height,
                                     VLC_OPENGL | VLC_GL_OFFSCREEN_DEFAULT_FRAMEBUFFER,
                                     NULL, NULL);
+#ifdef __APPLE__
+    /* Keep native surface rendering where no default-framebuffer offscreen
+     * provider is available. CGL does not yet supply that capability. */
+    if (vis->gl == NULL)
+    {
+        vlc_window_cfg_t cfg;
+        memset(&cfg, 0, sizeof(cfg));
+        cfg.is_decorated = true;
+        cfg.width = width;
+        cfg.height = height;
+        vis->gl = vlc_gl_surface_Create(VLC_OBJECT(filter), &cfg, NULL, NULL);
+        if (vis->gl == NULL)
+            goto error;
+        vis->native_surface = true;
+    }
+#endif
+    if (vis->native_surface)
+    {
+        /* The picture is only a nonblocking render token on a native surface. */
+        video_format_t token;
+        video_format_Init(&token, VLC_CODEC_RGBA);
+        token.i_width = token.i_visible_width = 1;
+        token.i_height = token.i_visible_height = 1;
+        token.i_sar_num = token.i_sar_den = 1;
+        vis->pool = picture_pool_NewFromFormat(&token, 1);
+        video_format_Clean(&token);
+        if (vis->pool == NULL)
+            goto error;
+        vis->format.i_width = vis->format.i_visible_width = width;
+        vis->format.i_height = vis->format.i_visible_height = height;
+        vis->display_ready = true;
+        return vis;
+    }
     if (vis->gl == NULL || vis->gl->offscreen_chroma_out != VLC_CODEC_RGBA)
         goto error;
     vis->format.i_width = vis->format.i_visible_width = width;
@@ -120,6 +159,15 @@ static inline bool visualization_gl_UpdateSize(struct visualization_gl *vis)
     if (stopped)
         return false;
     unsigned width, height;
+    if (vis->native_surface)
+    {
+        if (vlc_gl_surface_CheckSize(vis->gl, &width, &height))
+        {
+            vis->format.i_width = vis->format.i_visible_width = width;
+            vis->format.i_height = vis->format.i_visible_height = height;
+        }
+        return vis->format.i_width > 0 && vis->format.i_height > 0;
+    }
     if (!visualization_gl_GetSize(vis, &width, &height))
         return vis->display_ready;
     if (width == vis->format.i_width && height == vis->format.i_height)
@@ -194,6 +242,12 @@ static inline void visualization_gl_Present(struct visualization_gl *vis,
     if (pts == VLC_TICK_INVALID)
     {
         picture_Release(picture);
+        return;
+    }
+    if (vis->native_surface)
+    {
+        picture_Release(picture);
+        vlc_gl_Swap(vis->gl);
         return;
     }
     picture_t *source = vlc_gl_SwapOffscreen(vis->gl);

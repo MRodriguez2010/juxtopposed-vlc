@@ -502,6 +502,14 @@ test_modules_video_output_opengl_filters_SOURCES = \
 test_modules_visualization_gl_resize_SOURCES = modules/visualization/resize.c
 test_modules_visualization_gl_resize_CPPFLAGS = $(AM_CPPFLAGS) -DVISUAL_RESIZE_TEST_GL
 test_modules_visualization_gl_resize_LDADD = $(LIBVLCCORE) $(LIBVLC)
+if HAVE_GL
+check_PROGRAMS += test_modules_visualization_projectm_resize
+endif
+test_modules_visualization_projectm_resize_SOURCES = modules/visualization/resize.c
+test_modules_visualization_projectm_resize_CPPFLAGS = $(AM_CPPFLAGS) -DVISUAL_RESIZE_TEST_GL -DVISUAL_RESIZE_TEST_PROJECTM
+test_modules_visualization_projectm_resize_LDADD = $(LIBVLCCORE) $(LIBVLC)
+EXTRA_DIST += modules/visualization/projectm-presets/canvas-check.milk
+
 test_modules_video_output_opengl_offscreen_SOURCES = modules/video_output/opengl/offscreen.c
 test_modules_video_output_opengl_offscreen_LDADD = $(LIBVLCCORE) $(LIBVLC) ../modules/libvlc_opengl.la
 test_modules_video_output_opengl_offscreen_CPPFLAGS = $(AM_CPPFLAGS)

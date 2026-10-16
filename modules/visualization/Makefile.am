@@ -33,7 +33,7 @@ libgoom_plugin_la_LIBADD = $(GOOM_LIBS) $(LIBM)
 EXTRA_LTLIBRARIES += libgoom_plugin.la
 visu_PLUGINS += $(LTLIBgoom)
 
-libprojectm_plugin_la_SOURCES = visualization/projectm.cpp
+libprojectm_plugin_la_SOURCES = visualization/projectm.cpp visualization/opengl_vout.h visualization/size.h
 libprojectm_plugin_la_CXXFLAGS = $(AM_CXXFLAGS) $(PROJECTM_CFLAGS) $(CPPFLAGS_projectm)
 libprojectm_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(visu_RPATH)
 libprojectm_plugin_la_LIBADD = $(PROJECTM_LIBS)

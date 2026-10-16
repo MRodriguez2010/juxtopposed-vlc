@@ -18,7 +18,9 @@
 #include <stdlib.h>
 #undef NDEBUG
 #include <assert.h>
+#include <limits.h>
 #include <vlc_opengl.h>
+#include <vlc_modules.h>
 #include "../../../lib/libvlc_internal.h"
 
 static atomic_uint_fast64_t picture_size;
@@ -230,6 +232,8 @@ static void resize(libvlc_int_t *root, int64_t width, int64_t height,
     assert(var_SetInteger(root, "goom-height", height) == VLC_SUCCESS);
     assert(var_SetInteger(root, "glspectrum-width", width) == VLC_SUCCESS);
     assert(var_SetInteger(root, "glspectrum-height", height) == VLC_SUCCESS);
+    assert(var_SetInteger(root, "projectm-width", width) == VLC_SUCCESS);
+    assert(var_SetInteger(root, "projectm-height", height) == VLC_SUCCESS);
     wait_picture(expected_width, expected_height, previous);
     assert(atomic_load(&window_opens) == 1);
     assert(atomic_load(&window_closes) == 0);
@@ -238,7 +242,8 @@ static void resize(libvlc_int_t *root, int64_t width, int64_t height,
 static bool test_resize(const char *effect, bool converted)
 {
     const bool goom = !strcmp(effect, "goom");
-    const bool gl = test_gl = !strcmp(effect, "glspectrum");
+    const bool projectm = !strcmp(effect, "projectm");
+    const bool gl = test_gl = projectm || !strcmp(effect, "glspectrum");
     test_converted = converted;
     test_scope = !converted && !strcmp(effect, "scope");
     test_meter = !strcmp(effect, "vuMeter");
@@ -255,7 +260,7 @@ static bool test_resize(const char *effect, bool converted)
     const char *args[] = {
         "--ignore-config", "--no-plugins-cache", "--no-media-library", "--no-auto-preparse",
         "--no-spu", "--no-osd", "--aout=dummy", "--clock-master=monotonic",
-        goom ? "--audio-visual=goom" : gl ? "--audio-visual=glspectrum" : "--audio-visual=visual", "--vout=resize-test,none",
+        goom ? "--audio-visual=goom" : projectm ? "--audio-visual=projectm" : gl ? "--audio-visual=glspectrum" : "--audio-visual=visual", "--vout=resize-test,none",
         /* These preferences apply to video, but must not affect visualizers. */
         "--no-autoscale", "--zoom=2", "--align=5", "--fit=2",
         "--aspect-ratio=1:1", "--crop=4:3", "--width=100", "--height=100",
@@ -265,6 +270,11 @@ static bool test_resize(const char *effect, bool converted)
     libvlc_int_t *root = instance->p_libvlc_int;
     if (gl)
     {
+        if (!module_exists(effect))
+        {
+            libvlc_release(instance);
+            return false;
+        }
         vlc_gl_t *probe = vlc_gl_CreateOffscreen(VLC_OBJECT(root), NULL, 16, 16,
                                                 VLC_OPENGL | VLC_GL_OFFSCREEN_DEFAULT_FRAMEBUFFER,
                                                 NULL, NULL);
@@ -292,6 +302,21 @@ static bool test_resize(const char *effect, bool converted)
     var_Create(root, "glspectrum-height", VLC_VAR_INTEGER);
     var_SetInteger(root, "glspectrum-width", 800);
     var_SetInteger(root, "glspectrum-height", 500);
+    var_Create(root, "projectm-width", VLC_VAR_INTEGER);
+    var_Create(root, "projectm-height", VLC_VAR_INTEGER);
+    var_SetInteger(root, "projectm-width", 800);
+    var_SetInteger(root, "projectm-height", 500);
+    if (projectm)
+    {
+        const char *presets = getenv("VLC_TEST_PROJECTM_PRESETS");
+#ifdef TOP_SRCDIR
+        if (presets == NULL)
+            presets = TOP_SRCDIR "/test/modules/visualization/projectm-presets";
+#endif
+        var_Create(root, "projectm-preset-path", VLC_VAR_STRING);
+        if (presets != NULL)
+            var_SetString(root, "projectm-preset-path", presets);
+    }
     var_Create(root, "visualization-size", VLC_VAR_INTEGER);
     var_Create(root, "visualization-window-size", VLC_VAR_INTEGER);
     var_SetInteger(root, "visualization-size", -1);
@@ -324,6 +349,7 @@ static bool test_resize(const char *effect, bool converted)
     var_SetInteger(root, "effect-width", INT64_C(4294967297));
     var_SetInteger(root, "goom-width", INT64_C(4294967297));
     var_SetInteger(root, "glspectrum-width", INT64_C(4294967297));
+    var_SetInteger(root, "projectm-width", INT64_C(4294967297));
     wait_picture(800, 500, previous + 2);
     assert(atomic_load(&window_opens) == 1);
 
@@ -335,6 +361,8 @@ static bool test_resize(const char *effect, bool converted)
     var_SetInteger(root, "goom-height", 600);
     var_SetInteger(root, "glspectrum-width", 1200);
     var_SetInteger(root, "glspectrum-height", 600);
+    var_SetInteger(root, "projectm-width", 1200);
+    var_SetInteger(root, "projectm-height", 600);
     const vlc_tick_t deadline = vlc_tick_now() + VLC_TICK_FROM_SEC(5);
     /* Wait for both the live update and fallback display open to reject the
      * format before allowing it again. A retained old-size picture alone does
@@ -363,6 +391,12 @@ static bool test_resize(const char *effect, bool converted)
     previous = atomic_load(&picture_count);
     var_SetInteger(root, "visualization-window-size", size_key(1040, 620));
     wait_picture(1040, 620, previous);
+    if (gl)
+    {
+        previous = atomic_load(&picture_count);
+        var_SetInteger(root, "visualization-window-size", size_key(INT_MAX, 620));
+        wait_picture(1040, 620, previous + 2);
+    }
     previous = atomic_load(&picture_count);
     var_SetInteger(root, "visualization-size", -1);
     wait_picture(960, 540, previous);
@@ -398,15 +432,20 @@ int main(void)
     assert(vlc_timer_create(&timer, Timeout, NULL) == 0);
     vlc_timer_schedule(timer, false, VLC_TICK_FROM_SEC(45), 0);
 #ifdef VISUAL_RESIZE_TEST_GL
-    if (!test_resize("glspectrum", false))
+# ifdef VISUAL_RESIZE_TEST_PROJECTM
+    const char *effect = "projectm";
+# else
+    const char *effect = "glspectrum";
+# endif
+    if (!test_resize(effect, false))
     {
         vlc_timer_destroy(timer);
         assert(getenv("VLC_TEST_REQUIRE_GL") == NULL);
         return 77;
     }
-    fprintf(stderr, "glspectrum: live resize and recovery passed\n");
-    assert(test_resize("glspectrum", true));
-    fprintf(stderr, "glspectrum: converted display resize and recovery passed\n");
+    fprintf(stderr, "%s: live resize and recovery passed\n", effect);
+    assert(test_resize(effect, true));
+    fprintf(stderr, "%s: converted display resize and recovery passed\n", effect);
 #else
     const char *effects[] = { "scope", "spectrum", "spectrometer", "vuMeter", "dummy" };
     for (size_t i = 0; i < ARRAY_SIZE(effects); ++i)

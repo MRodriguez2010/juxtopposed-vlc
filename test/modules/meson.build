@@ -17,6 +17,16 @@ if opengl_dep.found() and (host_system == 'windows' or egl_dep.found())
         'module_depends': vlc_plugins_targets.keys(),
         'env': ['VLC_PLUGIN_PATH=' + vlc_build_root / 'modules'],
     }
+    vlc_tests += {
+        'name': 'test_modules_visualization_projectm_resize',
+        'sources': files('visualization/resize.c'),
+        'suite': ['modules', 'test_modules'],
+        'link_with': [libvlc, libvlccore],
+        'c_args': ['-DVISUAL_RESIZE_TEST_GL', '-DVISUAL_RESIZE_TEST_PROJECTM'],
+        'module_depends': vlc_plugins_targets.keys(),
+        'enabled': get_option('projectm').allowed(),
+        'env': ['VLC_PLUGIN_PATH=' + vlc_build_root / 'modules'],
+    }
 endif
 
 
