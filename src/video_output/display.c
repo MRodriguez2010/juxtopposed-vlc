@@ -772,6 +772,8 @@ int vout_SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
     assert(!fmt->p_palette);
     video_format_Clean(&osys->source);
     osys->source = *fmt;
+    video_format_Clean(&osys->display_fmt);
+    video_format_Copy(&osys->display_fmt, fmt);
     video_format_Clean(&osys->decoder_source);
     video_format_Copy(&osys->decoder_source, fmt);
     if (vctx)

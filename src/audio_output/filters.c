@@ -483,6 +483,8 @@ int aout_filter_UpdateVoutFormat(filter_t *filter, const video_format_t *fmt)
 
     video_format_t adjusted = *fmt;
     video_format_AdjustColorSpace(&adjusted);
+    if (vout_ChangeVisualizationFormat(owner_sys->vout, &adjusted) == VLC_SUCCESS)
+        return VLC_SUCCESS;
     const vout_configuration_t cfg = {
         .vout = owner_sys->vout, .clock = owner_sys->clock, .fmt = &adjusted,
     };

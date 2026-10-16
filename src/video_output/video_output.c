@@ -2329,6 +2329,69 @@ vout_thread_t *vout_Hold( vout_thread_t *vout)
     return vout;
 }
 
+int vout_ChangeVisualizationFormat(vout_thread_t *vout, const video_format_t *fmt)
+{
+    vout_thread_sys_t *sys = VOUT_THREAD_TO_SYS(vout);
+    if (sys->display == NULL || sys->filter.src_vctx != NULL || !VoutCheckFormat(fmt)
+        || fmt->p_palette != NULL || fmt->i_chroma != sys->original.i_chroma
+        || fmt->orientation != sys->original.orientation
+        || fmt->projection_mode != sys->original.projection_mode)
+        return VLC_EGENERIC;
+
+    video_format_t original;
+    VoutFixFormat(&original, fmt);
+    if (video_format_IsSimilar(&original, &sys->original))
+    {
+        video_format_Clean(&original);
+        return VLC_SUCCESS;
+    }
+    picture_pool_t *pool = picture_pool_NewFromFormat(&original, FILTER_POOL_SIZE);
+    if (pool == NULL)
+    {
+        video_format_Clean(&original);
+        return VLC_ENOMEM;
+    }
+
+    VoutRenderWakeUpUrgent(sys);
+    vout_control_Hold(&sys->control);
+    vlc_mutex_lock(&sys->window_lock);
+    vlc_queuedmutex_lock(&sys->display_lock);
+    int ret = vout_SetDisplayFormat(sys->display, &original, NULL);
+    if (ret == VLC_SUCCESS)
+    {
+        video_format_Clean(&sys->original);
+        sys->original = original;
+        picture_pool_t *previous = sys->private_pool;
+        sys->private_pool = pool;
+        pool = previous;
+    }
+    vlc_queuedmutex_unlock(&sys->display_lock);
+    vlc_mutex_unlock(&sys->window_lock);
+
+    if (ret == VLC_SUCCESS)
+    {
+        /* Drop old-size work without resetting the audio clock or clearing the
+         * presented image. The next picture rebuilds the filter source format. */
+        FilterFlush(sys, false);
+        if (sys->displayed.decoded)
+        {
+            picture_Release(sys->displayed.decoded);
+            sys->displayed.decoded = NULL;
+        }
+        picture_fifo_Lock(sys->decoder_fifo);
+        picture_fifo_Flush(sys->decoder_fifo, VLC_TICK_INVALID, true);
+        picture_fifo_Unlock(sys->decoder_fifo);
+        msg_Dbg(vout, "visualization display resized in place to %ux%u",
+                fmt->i_visible_width, fmt->i_visible_height);
+    }
+    else
+        video_format_Clean(&original);
+
+    picture_pool_Release(pool);
+    vout_control_ReleaseAndWake(&sys->control);
+    return ret;
+}
+
 int vout_ChangeSource( vout_thread_t *vout, const video_format_t *original,
                        const vlc_video_context *vctx )
 {

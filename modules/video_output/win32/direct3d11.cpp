@@ -405,8 +405,10 @@ static int UpdateStaging(vout_display_t *vd, const video_format_t *fmt)
         return VLC_SUCCESS;
 
     /* we need a staging texture */
-    ID3D11Texture2D *textures[DXGI_MAX_SHADER_VIEW] = {0};
-    video_format_t texture_fmt = *vd->source;
+    picture_sys_d3d11_t staging = {};
+    plane_t planes[PICTURE_PLANE_MAX] = {};
+    ComPtr<ID3D11VideoProcessorOutputView> outputView;
+    video_format_t texture_fmt = *fmt;
     texture_fmt.i_width  = sys->picQuad.generic.i_width;
     texture_fmt.i_height = sys->picQuad.generic.i_height;
     if (!is_d3d11_opaque(fmt->i_chroma))
@@ -415,21 +417,19 @@ static int UpdateStaging(vout_display_t *vd, const video_format_t *fmt)
     }
 
     if (AllocateTextures(vd, sys->d3d_dev, sys->picQuad.generic.textureFormat, &texture_fmt,
-                            false, textures, sys->stagingPlanes))
+                            false, staging.texture, planes))
     {
         msg_Err(vd, "Failed to allocate the staging texture");
         return VLC_EGENERIC;
     }
 
     if (D3D11_AllocateResourceView(vlc_object_logger(vd), sys->d3d_dev->d3ddevice, sys->picQuad.generic.textureFormat,
-                                textures, 0, sys->stagingSys.renderSrc))
+                                staging.texture, 0, staging.renderSrc))
     {
         msg_Err(vd, "Failed to allocate the staging shader view");
+        ReleaseD3D11PictureSys(&staging);
         return VLC_EGENERIC;
     }
-
-    for (unsigned plane = 0; plane < DXGI_MAX_SHADER_VIEW; plane++)
-        sys->stagingSys.texture[plane] = textures[plane];
 
     if (sys->old_feature.processor)
     {
@@ -439,16 +439,21 @@ static int UpdateStaging(vout_display_t *vd, const video_format_t *fmt)
         outDesc.Texture2D.MipSlice = 0;
 
         hr = sys->old_feature.d3dviddev->CreateVideoProcessorOutputView(
-                                                                textures[0],
+                                                                staging.texture[0],
                                                                 sys->old_feature.enumerator.Get(),
                                                                 &outDesc,
-                                                                sys->old_feature.outputView.ReleaseAndGetAddressOf());
+                                                                outputView.GetAddressOf());
         if (FAILED(hr))
         {
             msg_Dbg(vd,"Failed to create processor output. (hr=0x%lX)", hr);
+            ReleaseD3D11PictureSys(&staging);
             return VLC_EGENERIC;
         }
     }
+    ReleaseD3D11PictureSys(&sys->stagingSys);
+    sys->stagingSys = staging;
+    memcpy(sys->stagingPlanes, planes, sizeof(planes));
+    sys->old_feature.outputView = outputView;
     return VLC_SUCCESS;
 }
 
@@ -536,6 +541,23 @@ static int UpdateFormat(vout_display_t *vd, const video_format_t *fmtp, vlc_vide
     int err = SetupOutputFormat(vd, &fmt, vctx, &sys->picQuad.quad_fmt);
     if (err != VLC_SUCCESS)
         goto error;
+
+    /* A successful update must accept the requested input chroma. */
+    if (vctx == nullptr && fmt.i_chroma != fmtp->i_chroma)
+    {
+        err = VLC_EGENERIC;
+        goto error;
+    }
+    if (!is_d3d11_opaque(fmt.i_chroma))
+        sys->picQuad.quad_fmt.i_chroma = fmt.i_chroma;
+    if (sys->picQuad.generic.textureFormat->heightDenominator != 1 ||
+        sys->picQuad.generic.textureFormat->widthDenominator != 1)
+    {
+        sys->picQuad.quad_fmt.i_width = (sys->picQuad.quad_fmt.i_width + 1) & ~1;
+        sys->picQuad.quad_fmt.i_height = (sys->picQuad.quad_fmt.i_height + 1) & ~1;
+    }
+    sys->picQuad.generic.i_width = sys->picQuad.quad_fmt.i_width;
+    sys->picQuad.generic.i_height = sys->picQuad.quad_fmt.i_height;
 
     err = UpdateDisplayFormat(vd, &sys->picQuad.quad_fmt);
     if (err != VLC_SUCCESS)

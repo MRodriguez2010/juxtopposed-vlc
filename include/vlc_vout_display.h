@@ -279,7 +279,8 @@ struct vlc_display_operations
     /**
      * Notifies a change in the input format.
      *
-     * The format size is not expected to change.
+     * The format may change dimensions. Return an error if the new format
+     * cannot be accepted without reopening the display.
      *
      * \param fmt the requested input format
      * \param ctx the video context
@@ -497,7 +498,7 @@ void vout_display_SetSize(vout_display_t *vd, unsigned width, unsigned height);
  * updates, video context management, and display converter cleanup when the
  * format change is accepted by the display module.
  *
- * \note The format size is not expected to change.
+ * \note Dimensions may change if the display module accepts the new format.
  *
  * \param vd the vout display to update
  * \param fmt the new video format to set

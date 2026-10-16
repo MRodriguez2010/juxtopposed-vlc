@@ -22,6 +22,7 @@
 
 static atomic_uint_fast64_t picture_size;
 static atomic_uint picture_count, window_opens, window_closes, failed_formats;
+static atomic_uint display_opens, display_closes, display_updates;
 static atomic_bool fail_format;
 static bool test_scope, test_meter;
 static vlc_sem_t frame_event;
@@ -61,7 +62,8 @@ static int OpenWindow(vlc_window_t *wnd)
 
 static void Display(vout_display_t *vd, picture_t *picture)
 {
-    (void) vd;
+    assert(vd->fmt->i_visible_width == picture->format.i_visible_width);
+    assert(vd->fmt->i_visible_height == picture->format.i_visible_height);
     if (test_meter && atomic_load(&picture_size)
                       != size_key(picture->format.i_visible_width,
                                   picture->format.i_visible_height))
@@ -106,6 +108,26 @@ static void Display(vout_display_t *vd, picture_t *picture)
     vlc_sem_post(&frame_event);
 }
 
+static void CloseDisplay(vout_display_t *vd)
+{
+    (void)vd;
+    atomic_fetch_add(&display_closes, 1);
+}
+
+static int UpdateDisplay(vout_display_t *vd, const video_format_t *fmt,
+                         vlc_video_context *vctx)
+{
+    (void)vd; (void)vctx;
+    if (fmt->i_visible_width == 1200 && atomic_load(&fail_format))
+    {
+        atomic_fetch_add(&failed_formats, 1);
+        vlc_sem_post(&frame_event);
+        return VLC_EGENERIC;
+    }
+    atomic_fetch_add(&display_updates, 1);
+    return VLC_SUCCESS;
+}
+
 static int OpenDisplay(vout_display_t *vd, video_format_t *fmt,
                        vlc_video_context *vctx)
 {
@@ -124,7 +146,10 @@ static int OpenDisplay(vout_display_t *vd, video_format_t *fmt,
         vlc_sem_post(&frame_event);
         return VLC_EGENERIC;
     }
-    static const struct vlc_display_operations ops = { .display = Display };
+    atomic_fetch_add(&display_opens, 1);
+    static const struct vlc_display_operations ops = {
+        .display = Display, .close = CloseDisplay, .update_format = UpdateDisplay,
+    };
     vd->ops = &ops;
     return VLC_SUCCESS;
 }
@@ -178,6 +203,9 @@ static void test_resize(const char *effect)
     atomic_store(&window_opens, 0);
     atomic_store(&window_closes, 0);
     atomic_store(&failed_formats, 0);
+    atomic_store(&display_opens, 0);
+    atomic_store(&display_closes, 0);
+    atomic_store(&display_updates, 0);
     atomic_store(&fail_format, false);
     vlc_sem_init(&frame_event, 0);
     const char *args[] = {
@@ -225,6 +253,10 @@ static void test_resize(const char *effect)
     resize(root, -1, -1, goom ? 64 : 532, goom ? 64 : 400);
     resize(root, 1280, 720, 1280, 720);
     resize(root, 800, 500, 800, 500);
+
+    assert(atomic_load(&display_opens) == 1);
+    assert(atomic_load(&display_closes) == 0);
+    assert(atomic_load(&display_updates) >= 5);
 
     unsigned previous = atomic_load(&picture_count);
     var_SetInteger(root, "effect-width", INT64_C(4294967297));
