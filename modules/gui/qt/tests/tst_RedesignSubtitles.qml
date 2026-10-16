@@ -7,6 +7,9 @@ TestCase {
     id: testCase
     name: "JuxtopposedSubtitles"
     width: 400; height: 1250
+    property bool mirrored: false
+    LayoutMirroring.enabled: mirrored
+    LayoutMirroring.childrenInherit: true
     visible: true; when: windowShown
     QtObject {
         id: store
@@ -42,6 +45,7 @@ TestCase {
     function slider(name) { return findChild(item(name), "settingSlider") }
     function field(name) { return findChild(item(name), "settingValueField") }
     function init() {
+        mirrored = false
         subtitles.liveSizeMode = -1; subtitles.liveTextScale = undefined; subtitles.livePixelSize = undefined
         store.values = {"redesign-sub-track": 1, "redesign-sub-language": "English", "redesign-subtitle-delay": -4000,
             "sub-fps": 1, "redesign-subtitle-duration": 0, "sub-text-use-embedded-style": false,
@@ -49,6 +53,39 @@ TestCase {
             "sub-margin": 0, "sub-text-size-mode": 0, "sub-text-scale": 100, "sub-text-size-pixels": 30,
             "freetype-outline-thickness": 4, "freetype-background-opacity": 0}
         store.lastName = ""; store.revision++; wait(10)
+    }
+    function test_delayFillRunsBetweenZeroAndTheSelectedTime_data() {
+        return [
+            {tag: "negative", delay: -4000, mirrored: false},
+            {tag: "zero", delay: 0, mirrored: false},
+            {tag: "positive", delay: 4000, mirrored: false},
+            {tag: "negative-rtl", delay: -4000, mirrored: true},
+            {tag: "zero-rtl", delay: 0, mirrored: true},
+            {tag: "positive-rtl", delay: 4000, mirrored: true}
+        ]
+    }
+    function test_delayFillRunsBetweenZeroAndTheSelectedTime(data) {
+        mirrored = data.mirrored
+        store.stage("redesign-subtitle-delay", data.delay)
+        const control = slider("subtitleDelaySetting")
+        tryCompare(control, "mirrored", data.mirrored)
+        wait(30)
+        const image = grabImage(testCase)
+        const samples = [
+            {position: 0.15, filled: false},
+            {position: 0.4, filled: data.delay < 0},
+            {position: 0.6, filled: data.delay > 0},
+            {position: 0.85, filled: false}
+        ]
+        for (const sample of samples) {
+            const position = data.mirrored ? 1 - sample.position : sample.position
+            const point = control.mapToItem(testCase, position * control.width, control.height / 2)
+            const x = Math.round(point.x), y = Math.floor(point.y)
+            const expected = Qt.color(sample.filled ? "#371f06" : "#090909")
+            verify(Math.abs(image.red(x, y) - Math.round(expected.r * 255)) <= 1, "Delay fill red at " + sample.position + ": got " + image.red(x, y) + ", image " + image.width + "x" + image.height)
+            verify(Math.abs(image.green(x, y) - Math.round(expected.g * 255)) <= 1, "Delay fill green at " + sample.position)
+            verify(Math.abs(image.blue(x, y) - Math.round(expected.b * 255)) <= 1, "Delay fill blue at " + sample.position)
+        }
     }
     function test_completeReferenceOrderAndScaleLabels() {
         const names = ["defaultTrackSetting", "defaultLanguageSetting", "subtitleSynchronizationHeading",

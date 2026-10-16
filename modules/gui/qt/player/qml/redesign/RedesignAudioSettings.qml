@@ -85,7 +85,7 @@ ColumnLayout {
         label: qsTr("Audio Track Delay"); suffix: " s"; decimals: 3
         from: -10; to: 10; inputFrom: -2147483.648; inputTo: 2147483.647; stepSize: 0.05
         ticks: [-10, 0, 10]; tickSuffix: " s"; sliderTopMargin: 10
-        resetValue: 0; currentValue: root.audioDelaySeconds
+        resetValue: 0; fillOrigin: 0; currentValue: root.audioDelaySeconds
         onMoved: value => root.delayRequested(value)
     }
     Rectangle {

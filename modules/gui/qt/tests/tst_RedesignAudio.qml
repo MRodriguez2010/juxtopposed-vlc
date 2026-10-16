@@ -108,6 +108,18 @@ TestCase {
         keyClick(Qt.Key_Space)
         verify(!store.stereoTestRunning)
     }
+    function test_zeroDelayHasNoActiveFill() {
+        const control = findChild(item("audioDelaySetting"), "settingSlider")
+        wait(20)
+        const image = grabImage(testCase)
+        for (const position of [0.25, 0.75]) {
+            const point = control.mapToItem(testCase, position * control.width, control.height / 2)
+            const x = Math.round(point.x), y = Math.floor(point.y)
+            compare(image.red(x, y), 9)
+            compare(image.green(x, y), 9)
+            compare(image.blue(x, y), 9)
+        }
+    }
     function test_audioGroupsFollowReferenceOrder() {
         verify(item("defaultTrackSetting").mapToItem(audio, 0, 0).y < item("stereoModeHeading").y)
         verify(item("stereoModeSetting").y < item("audioSynchronizationHeading").y)

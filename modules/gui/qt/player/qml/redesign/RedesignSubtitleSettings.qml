@@ -34,21 +34,23 @@ ColumnLayout {
 
     RedesignTrackDefaults { Layout.fillWidth: true; subtitles: true; backend: root.backend; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor }
     Rectangle { Layout.fillWidth: true; Layout.leftMargin: -theme.dp(24); Layout.rightMargin: -theme.dp(20); Layout.topMargin: theme.dp(4); height: theme.dp(1); color: theme.border }
-    Text { objectName: "subtitleSynchronizationHeading"; Layout.topMargin: theme.dp(20); Layout.bottomMargin: theme.dp(20); text: qsTr("Synchronization"); color: theme.bright; font.pixelSize: theme.dp(16) }
+    Text { objectName: "subtitleSynchronizationHeading"; Layout.topMargin: theme.dp(20); Layout.bottomMargin: theme.dp(20); text: qsTr("Synchronization"); color: theme.playerHeading; font.pixelSize: theme.dp(16) }
     RedesignSettingSlider {
         objectName: "subtitleDelaySetting"
         Layout.fillWidth: true
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Subtitle Track Delay"); suffix: " s"; decimals: 3
         from: -10; to: 10; inputFrom: -2147483.648; inputTo: 2147483.647; stepSize: 0.05
         ticks: [-10, 0, 10]; tickSuffix: " s"; positiveTickSign: true; sliderTopMargin: 10; sliderLeftMargin: -4
-        resetValue: 0; currentValue: root.subtitleDelaySeconds
+        resetValue: 0; fillOrigin: 0; currentValue: root.subtitleDelaySeconds
         onMoved: value => root.delayRequested(value)
     }
     RedesignSettingSlider {
         objectName: "subtitleFPSControl"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(16)
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Subtitle Speed"); suffix: " fps"; decimals: 3
         from: 0; to: 60; inputTo: 2147483.647; stepSize: 0.001
         resetValue: 0; minimumValueText: qsTr("Automatic")
@@ -61,6 +63,7 @@ ColumnLayout {
         Layout.fillWidth: true; Layout.topMargin: theme.dp(14)
         visible: root.backend.describe("redesign-subtitle-duration").kind !== undefined
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Subtitle Duration Factor"); decimals: 3
         from: 0; to: 20; stepSize: 0.001; resetValue: 0
         scaleLabelsVisible: false; sliderTopMargin: 10; sliderLeftMargin: -4
@@ -68,7 +71,7 @@ ColumnLayout {
         onMoved: value => root.backend.stage("redesign-subtitle-duration", value)
     }
     Rectangle { Layout.fillWidth: true; Layout.leftMargin: -theme.dp(24); Layout.rightMargin: -theme.dp(20); Layout.topMargin: theme.dp(18); height: theme.dp(1); color: theme.border }
-    Text { objectName: "subtitleAppearanceHeading"; Layout.topMargin: theme.dp(20); Layout.bottomMargin: theme.dp(8); text: qsTr("Appearance"); color: theme.bright; font.pixelSize: theme.dp(16) }
+    Text { objectName: "subtitleAppearanceHeading"; Layout.topMargin: theme.dp(20); Layout.bottomMargin: theme.dp(8); text: qsTr("Appearance"); color: theme.playerHeading; font.pixelSize: theme.dp(16) }
     RedesignPreferenceRow {
         objectName: "subtitleAppearance_sub-text-use-embedded-style"
         Layout.fillWidth: true
@@ -102,10 +105,10 @@ ColumnLayout {
     RowLayout {
         objectName: "subtitleSizeModeSetting"
         Layout.fillWidth: true; Layout.preferredHeight: theme.dp(60)
-        Text { Layout.fillWidth: true; text: qsTr("Size Values"); color: theme.foreground; font.pixelSize: theme.dp(14) }
+        Text { Layout.fillWidth: true; text: qsTr("Size Values"); color: theme.playerLabel; font.pixelSize: theme.dp(14) }
         Rectangle {
             Layout.preferredWidth: theme.dp(180); Layout.preferredHeight: theme.dp(38)
-            radius: theme.dp(4); color: theme.field; border.color: theme.border
+            radius: theme.dp(6); color: theme.field
             RowLayout {
                 anchors.fill: parent; anchors.margins: theme.dp(2); spacing: theme.dp(2)
                 Repeater {
@@ -117,8 +120,9 @@ ColumnLayout {
                         Layout.fillWidth: true; Layout.fillHeight: true
                         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                         caption: modelData; text: modelData
+                        foreground: theme.playerLabel
                         selected: root.pixels === (index === 1)
-                        background: Rectangle { radius: theme.dp(3); color: parent.selected ? theme.progress : parent.hovered ? theme.hover : "transparent"; border.width: parent.visualFocus ? 1 : 0; border.color: theme.accent }
+                        background: Rectangle { radius: theme.dp(4); color: parent.selected ? theme.progress : parent.hovered ? theme.hover : root.lightTheme ? theme.background : "#191919"; border.width: parent.visualFocus ? 1 : 0; border.color: theme.accent }
                         onClicked: root.backend.stage("sub-text-size-mode", index)
                     }
                 }
@@ -130,6 +134,7 @@ ColumnLayout {
         objectName: "subtitleFontSizeSetting"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(22)
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Font Size"); displayValueAsText: true
         valueLabel: root.pixels ? Math.round(root.fontSize) + " px" : root.fontSize === 100 ? qsTr("Auto") : Math.round(root.fontSize) + " %"
         from: root.pixels ? 1 : 10; to: 500; stepSize: 1; scaleLabelsVisible: false; sliderTopMargin: 6; sliderLeftMargin: -4
@@ -144,6 +149,7 @@ ColumnLayout {
         objectName: "subtitleOutlineThicknessSetting"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(36)
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Outline Thickness"); displayValueAsText: true
         valueLabel: currentValue === 0 ? qsTr("None") : currentValue === 1 ? qsTr("Thin") : currentValue === 4 ? qsTr("Normal") : currentValue === 8 ? qsTr("Thick") : Math.round(currentValue) + " %"
         from: 0; to: 50; stepSize: 1; scaleLabelsVisible: false; sliderTopMargin: 6; sliderLeftMargin: -4
@@ -157,6 +163,7 @@ ColumnLayout {
         objectName: "subtitleBackgroundOpacitySetting"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(36)
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Background Opacity"); displayValueAsText: true
         valueLabel: Math.round(currentValue) + " %"
         from: 0; to: 100; stepSize: 1; ticks: [0, 20, 40, 60, 80, 100]

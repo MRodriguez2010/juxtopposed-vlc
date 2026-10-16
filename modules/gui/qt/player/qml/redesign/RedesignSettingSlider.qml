@@ -20,6 +20,7 @@ ColumnLayout {
     property real inputTo: to
     property real stepSize: 0.1
     property real resetValue: 1
+    property real fillOrigin: from
     property string minimumValueText
     property bool trimTrailingZeros: false
     property var ticks: []
@@ -97,7 +98,7 @@ ColumnLayout {
             visible: root.valueFieldVisible && root.displayValueAsText
             Layout.preferredWidth: theme.dp(138)
             horizontalAlignment: Text.AlignRight
-            text: root.valueLabel; color: theme.foreground; font.pixelSize: theme.dp(14)
+            text: root.valueLabel; color: root.labelColor; font.pixelSize: theme.dp(14)
         }
     }
     C.Slider {
@@ -130,7 +131,19 @@ ColumnLayout {
         background: Rectangle {
             x: slider.leftPadding; y: slider.topPadding + slider.availableHeight / 2 - height / 2
             width: slider.availableWidth; height: theme.dp(root.trackHeight); radius: theme.dp(root.trackRadius); color: theme.field
-            Rectangle { x: theme.dp(root.trackInset); y: x; width: slider.position * Math.max(0, parent.width - 2 * x); height: Math.max(0, parent.height - 2 * y); radius: Math.max(0, parent.radius - x); color: theme.progress }
+            Rectangle {
+                readonly property real inset: theme.dp(root.trackInset)
+                readonly property real span: Math.max(0, parent.width - 2 * inset)
+                readonly property real origin: {
+                    const position = Math.max(0, Math.min(1, root.positionFor(root.fillOrigin)))
+                    return slider.mirrored ? 1 - position : position
+                }
+                x: inset + Math.min(slider.visualPosition, origin) * span
+                y: inset
+                width: Math.abs(slider.visualPosition - origin) * span
+                height: Math.max(0, parent.height - 2 * inset)
+                radius: Math.max(0, parent.radius - inset); color: theme.progress
+            }
             Repeater {
                 model: root.ticks
                 Rectangle {
