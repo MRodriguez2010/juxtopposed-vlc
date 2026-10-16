@@ -40,6 +40,11 @@
 
 #ifdef HAVE_PROJECTM4
 # include <projectM-4/projectM.h>
+# include <algorithm>
+# include <atomic>
+# include <memory>
+# include <string>
+# include <vector>
 #else
 # include <libprojectM/projectM.hpp>
 #endif
@@ -72,6 +77,8 @@ static void Close        ( filter_t * );
 
 #define PRESET_PATH_TXT N_("projectM preset path")
 #define PRESET_PATH_LONGTXT N_("Path to the projectM preset directory")
+#define PRESET_DURATION_TEXT N_("Preset duration")
+#define PRESET_DURATION_LONGTEXT N_("Time before the next visualization preset, in seconds.")
 
 #define TITLE_FONT_TXT N_("Title font")
 #define TITLE_FONT_LONGTXT N_("Font used for the titles")
@@ -119,22 +126,34 @@ vlc_module_begin ()
     set_description( N_("libprojectM effect") )
     set_capability( "visualization", 0 )
     set_subcategory( SUBCAT_AUDIO_VISUAL )
-#ifndef HAVE_PROJECTM2
+#if !defined(HAVE_PROJECTM2) && !defined(HAVE_PROJECTM4)
     add_loadfile("projectm-config", "/usr/share/projectM/config.inp",
                  CONFIG_TEXT, CONFIG_LONGTEXT)
 #else
+# ifdef HAVE_PROJECTM4
+    add_obsolete_string("projectm-config")
+    add_directory("projectm-preset-path", NULL,
+                  PRESET_PATH_TXT, PRESET_PATH_LONGTXT)
+# else
     add_directory("projectm-preset-path", PRESET_PATH,
                   PRESET_PATH_TXT, PRESET_PATH_LONGTXT)
     add_loadfile("projectm-title-font", FONT_PATH,
                  TITLE_FONT_TXT, TITLE_FONT_LONGTXT)
     add_loadfile("projectm-menu-font", FONT_PATH_MENU,
                  MENU_FONT_TXT, MENU_FONT_LONGTXT)
+# endif
+    add_integer_with_range("projectm-preset-duration", 30, 1, 600,
+                           PRESET_DURATION_TEXT, PRESET_DURATION_LONGTEXT)
 #endif
     add_integer( "projectm-width", 800, WIDTH_TEXT, WIDTH_LONGTEXT )
     add_integer( "projectm-height", 500, HEIGHT_TEXT, HEIGHT_LONGTEXT )
     add_integer( "projectm-meshx", 32, MESHX_TEXT, MESHX_LONGTEXT )
     add_integer( "projectm-meshy", 24, MESHY_TEXT, MESHY_LONGTEXT )
+#ifndef HAVE_PROJECTM4
     add_integer( "projectm-texture-size", 1024, TEXTURE_TEXT, TEXTURE_LONGTEXT )
+#else
+    add_obsolete_integer("projectm-texture-size")
+#endif
     add_shortcut( "projectm" )
     set_callback( Open )
 vlc_module_end ()
@@ -144,6 +163,120 @@ vlc_module_end ()
  * Local prototypes
  *****************************************************************************/
 namespace {
+
+#ifdef HAVE_PROJECTM4
+class PresetPlaylist
+{
+    filter_t *filter;
+    projectm_handle instance;
+    std::vector<std::string> files;
+    size_t cursor = 0;
+    std::atomic<bool> requested{true}, hard_cut{true}, failed{false};
+
+    static void SwitchRequested(bool hard, void *opaque)
+    {
+        auto *self = static_cast<PresetPlaylist *>(opaque);
+        self->hard_cut.store(hard, std::memory_order_relaxed);
+        self->requested.store(true, std::memory_order_release);
+    }
+
+    static void SwitchFailed(const char *, const char *message, void *opaque)
+    {
+        auto *self = static_cast<PresetPlaylist *>(opaque);
+        self->failed.store(true, std::memory_order_relaxed);
+        msg_Warn(self->filter, "Could not load a projectM preset: %s", message);
+    }
+
+    static bool Read(const std::string &path, std::string &contents)
+    {
+        std::unique_ptr<FILE, decltype(&fclose)> file(vlc_fopen(path.c_str(), "rb"), fclose);
+        if (!file || fseek(file.get(), 0, SEEK_END) != 0)
+            return false;
+        const long length = ftell(file.get());
+        /* Match the library's 1 MiB preset parser limit before reading data. */
+        if (length <= 0 || length > 1024 * 1024 ||
+            fseek(file.get(), 0, SEEK_SET) != 0)
+            return false;
+        contents.resize(length);
+        return fread(&contents[0], 1, length, file.get()) == (size_t)length &&
+               contents.find('\0') == std::string::npos;
+    }
+
+public:
+    PresetPlaylist(filter_t *filter, projectm_handle instance)
+        : filter(filter), instance(instance)
+    {
+        std::unique_ptr<char, decltype(&free)> path(
+            var_InheritString(filter, "projectm-preset-path"), free);
+        if (!path)
+            path.reset(config_GetSysPath(VLC_PKG_DATA_DIR, "visualization"));
+        if (path)
+        {
+            std::unique_ptr<vlc_DIR, decltype(&vlc_closedir)> directory(
+                vlc_opendir(path.get()), vlc_closedir);
+            if (directory)
+                while (files.size() < 4096)
+                {
+                    const char *entry = vlc_readdir(directory.get());
+                    if (entry == NULL)
+                        break;
+                    const size_t length = strlen(entry);
+                    if (length > 5 && !strcasecmp(entry + length - 5, ".milk"))
+                        files.emplace_back(std::string(path.get()) + '/' + entry);
+                }
+            const char *textures[] = {path.get()};
+            projectm_set_texture_search_paths(instance, textures, 1);
+        }
+        if (files.empty())
+            msg_Warn(filter, "No projectM presets were found");
+        for (size_t i = files.size(); i > 1; --i)
+            std::swap(files[i - 1], files[(unsigned)vlc_mrand48() % i]);
+        projectm_set_preset_switch_requested_event_callback(instance, SwitchRequested, this);
+        projectm_set_preset_switch_failed_event_callback(instance, SwitchFailed, this);
+    }
+
+    void Detach()
+    {
+        projectm_set_preset_switch_requested_event_callback(instance, NULL, NULL);
+        projectm_set_preset_switch_failed_event_callback(instance, NULL, NULL);
+    }
+
+    void Update()
+    {
+        if (!requested.exchange(false, std::memory_order_acquire))
+            return;
+        const bool smooth = !hard_cut.load(std::memory_order_relaxed);
+        /* Load outside the render callback. Bad entries are removed, and one
+         * audio frame makes only a bounded number of attempts. */
+        for (unsigned attempt = 0; !files.empty() && attempt < 8; ++attempt)
+        {
+            std::string contents;
+            failed.store(false, std::memory_order_relaxed);
+            if (Read(files[cursor], contents))
+            {
+                /* VLC's file API supports UTF-8 Windows paths. Passing data
+                 * also avoids projectM's narrow-path file stream. */
+                projectm_load_preset_data(instance, contents.c_str(), smooth);
+                if (!failed.load(std::memory_order_relaxed))
+                {
+                    msg_Dbg(filter, "Loaded projectM preset: %s", files[cursor].c_str());
+                    cursor = (cursor + 1) % files.size();
+                    if (files.size() == 1)
+                        projectm_set_preset_locked(instance, true);
+                    return;
+                }
+            }
+            else
+                msg_Warn(filter, "Could not read projectM preset: %s", files[cursor].c_str());
+            files.erase(files.begin() + cursor);
+            if (!files.empty())
+                cursor %= files.size();
+        }
+        if (!files.empty())
+            requested.store(true, std::memory_order_release);
+    }
+};
+#endif
 
 struct filter_sys_t
 {
@@ -386,6 +519,12 @@ static void *Thread( void *p_data )
     }
     projectm_set_window_size(p_projectm, p_sys->canvas->format.i_width,
                              p_sys->canvas->format.i_height);
+    projectm_set_mesh_size(p_projectm,
+        std::min<int64_t>(300, std::max<int64_t>(8, var_InheritInteger(p_filter, "projectm-meshx"))),
+        std::min<int64_t>(300, std::max<int64_t>(8, var_InheritInteger(p_filter, "projectm-meshy"))));
+    projectm_set_preset_duration(p_projectm, var_InheritInteger(p_filter, "projectm-preset-duration"));
+    projectm_set_soft_cut_duration(p_projectm, 5);
+    PresetPlaylist presets(p_filter, p_projectm);
 #else
 #ifndef HAVE_PROJECTM2
     psz_config = var_InheritString( p_filter, "projectm-config" );
@@ -412,7 +551,7 @@ static void *Thread( void *p_data )
     settings.titleFontURL         = psz_title_font;
     settings.menuFontURL          = psz_menu_font;
     settings.smoothPresetDuration = 5;
-    settings.presetDuration       = 30;
+    settings.presetDuration       = var_InheritInteger(p_filter, "projectm-preset-duration");
     settings.beatSensitivity      = 10;
     settings.aspectCorrection     = 1;
     settings.easterEgg            = 1;
@@ -486,6 +625,7 @@ static void *Thread( void *p_data )
             samples[i] = value / p_sys->i_channels;
         }
 #ifdef HAVE_PROJECTM4
+        presets.Update();
         projectm_pcm_add_float(p_projectm, samples, count, (projectm_channels)1);
         projectm_opengl_render_frame(p_projectm);
 #else
@@ -497,6 +637,9 @@ static void *Thread( void *p_data )
         block_Release(block);
     }
     free(samples);
+#ifdef HAVE_PROJECTM4
+    presets.Detach();
+#endif
     if (p_sys->canvas->context_failed && vlc_gl_MakeCurrent(gl) == VLC_SUCCESS)
         p_sys->canvas->context_failed = false;
     if (!p_sys->canvas->context_failed)

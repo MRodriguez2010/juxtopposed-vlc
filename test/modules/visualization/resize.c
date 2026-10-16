@@ -27,7 +27,7 @@ static atomic_uint_fast64_t picture_size;
 static atomic_uint picture_count, window_opens, window_closes, failed_formats;
 static atomic_uint display_opens, display_closes, display_updates;
 static atomic_bool fail_format;
-static bool test_scope, test_meter, test_converted, test_gl;
+static bool test_scope, test_meter, test_converted, test_gl, test_projectm;
 static vlc_sem_t frame_event;
 
 static uint64_t size_key(unsigned width, unsigned height)
@@ -82,6 +82,25 @@ static void Display(vout_display_t *vd, picture_t *picture)
                     colored = p[0] > 50 || p[1] > 50 || p[2] > 50;
                 }
             assert(colored);
+            if (test_projectm && picture->format.i_visible_width >= 64 &&
+                picture->format.i_visible_height >= 64)
+            {
+                /* The fixture has a red outer border; projectM's idle logo
+                 * cannot pass a successful preset-loading check. */
+                bool border = false;
+                const unsigned width = picture->format.i_visible_width;
+                const unsigned height = picture->format.i_visible_height;
+                for (unsigned y = 0; y < height / 20 && !border; ++y)
+                    for (unsigned x = 0; x < width && !border; ++x)
+                    {
+                        const uint8_t *p = picture->p[0].p_pixels
+                            + y * picture->p[0].i_pitch + x * 4;
+                        const unsigned red = p[test_converted ? 2 : 0];
+                        border = red > 100 && red > p[1] * 2 &&
+                            red > p[test_converted ? 0 : 2] * 2;
+                    }
+                assert(border);
+            }
         }
     }
     if (test_converted)
@@ -243,6 +262,7 @@ static bool test_resize(const char *effect, bool converted)
 {
     const bool goom = !strcmp(effect, "goom");
     const bool projectm = !strcmp(effect, "projectm");
+    test_projectm = projectm;
     const bool gl = test_gl = projectm || !strcmp(effect, "glspectrum");
     test_converted = converted;
     test_scope = !converted && !strcmp(effect, "scope");
