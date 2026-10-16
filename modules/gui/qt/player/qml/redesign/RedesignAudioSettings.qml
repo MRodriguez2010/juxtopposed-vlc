@@ -18,17 +18,46 @@ ColumnLayout {
     signal stereoRequested(int index)
     signal delayRequested(real seconds)
     spacing: 0
+    onVisibleChanged: if (!visible && backend && typeof backend.stopStereoTest === "function") backend.stopStereoTest()
 
     RedesignTrackDefaults {
         Layout.fillWidth: true
         backend: root.backend
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
     }
-    Text {
+    RowLayout {
         objectName: "stereoModeHeading"
         Layout.fillWidth: true; Layout.minimumHeight: theme.dp(68)
-        verticalAlignment: Text.AlignVCenter
-        text: qsTr("Stereo Mode"); color: theme.foreground; font.pixelSize: theme.dp(14)
+        Text {
+            Layout.fillWidth: true
+            text: qsTr("Stereo Mode"); color: theme.foreground; font.pixelSize: theme.dp(14)
+        }
+        RedesignButton {
+            objectName: "stereoTestButton"
+            Layout.preferredWidth: theme.dp(67); Layout.preferredHeight: theme.dp(34)
+            scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+            caption: root.backend.stereoTestRunning ? qsTr("Stop") : qsTr("Test")
+            text: qsTr("Test the left and right audio channels")
+            foreground: root.backend.stereoTestRunning ? theme.accent : theme.menuAccent
+            enabled: typeof root.backend.startStereoTest === "function"
+            background: Rectangle {
+                radius: theme.dp(4)
+                color: parent.hovered ? theme.hover : root.backend.stereoTestRunning
+                    ? theme.progress : theme.tintAccent(theme.panel, 0.05)
+                border.width: parent.visualFocus ? 1 : 0; border.color: theme.accent
+            }
+            onClicked: {
+                if (root.backend.stereoTestRunning) root.backend.stopStereoTest()
+                else root.backend.startStereoTest()
+            }
+        }
+    }
+    Text {
+        objectName: "stereoTestMessage"
+        Layout.fillWidth: true; Layout.bottomMargin: theme.dp(4)
+        visible: !!root.backend.stereoTestRunning || text.length > 0
+        text: root.backend.stereoTestMessage || ""
+        color: theme.foreground; font.pixelSize: theme.dp(12); wrapMode: Text.WordWrap
     }
     RedesignModelChoice {
         objectName: "stereoModeSetting"

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "redesign_preferences.hpp"
+#include "player/stereo_test_player.hpp"
 #include <vlc_configuration.h>
 #include <vlc_modules.h>
 #include <vlc_plugin.h>
@@ -322,6 +323,8 @@ RedesignPreferences::RedesignPreferences(QObject* parent) : QObject(parent)
     m_saveTimer.setSingleShot(true);
     m_saveTimer.setInterval(300);
     connect(&m_saveTimer, &QTimer::timeout, this, [this]() { if (m_autoSave && dirty()) save(); });
+    m_stereoTestTimer.setInterval(50);
+    connect(&m_stereoTestTimer, &QTimer::timeout, this, &RedesignPreferences::updateStereoTest);
     size_t count = 0;
     module_t** modules = module_list_get(&count);
     for (size_t i = 0; i < count; ++i) {
@@ -344,6 +347,81 @@ RedesignPreferences::RedesignPreferences(QObject* parent) : QObject(parent)
     });
 }
 
+RedesignPreferences::~RedesignPreferences()
+{
+    m_stereoTestTimer.stop();
+    m_stereoTest.reset();
+}
+
+bool RedesignPreferences::startStereoTest()
+{
+    stopStereoTest();
+    if (!m_ctx || !value(QStringLiteral("audio")).toBool()) {
+        finishStereoTest(qtr("Enable audio to run this test."));
+        return false;
+    }
+    auto *output = vlc_player_aout_Hold(m_ctx->getIntf()->p_player);
+    if (!output) {
+        finishStereoTest(qtr("VLC cannot start the audio test."));
+        return false;
+    }
+    const bool muted = aout_MuteGet(output) > 0;
+    const bool silent = aout_VolumeGet(output) == 0;
+    if (muted || silent) {
+        aout_Release(output);
+        finishStereoTest(muted ? qtr("Unmute audio to run this test.")
+                              : qtr("Increase the volume to run this test."));
+        return false;
+    }
+    const int mode = isStaged(QStringLiteral("stereo-mode"))
+        ? value(QStringLiteral("stereo-mode")).toInt() : var_GetInteger(output, "stereo-mode");
+    auto test = std::make_unique<StereoTestPlayer>();
+    const bool started = test->start(VLC_OBJECT(m_ctx->getIntf()), output, mode);
+    aout_Release(output);
+    if (!started) {
+        test.reset();
+        finishStereoTest(qtr("VLC cannot start the audio test."));
+        return false;
+    }
+    m_stereoTest = std::move(test);
+    m_stereoTestMessage = qtr("Starting test");
+    m_stereoTestElapsed.start();
+    m_stereoTestTimer.start();
+    emit stereoTestChanged();
+    return true;
+}
+
+void RedesignPreferences::finishStereoTest(const QString& message)
+{
+    m_stereoTestTimer.stop();
+    m_stereoTest.reset();
+    m_stereoTestMessage = message;
+    emit stereoTestChanged();
+}
+
+void RedesignPreferences::stopStereoTest()
+{
+    if (m_stereoTest || !m_stereoTestMessage.isEmpty()) finishStereoTest();
+}
+
+void RedesignPreferences::updateStereoTest()
+{
+    if (!m_stereoTest) return;
+    const auto state = m_stereoTest->state();
+    if (state == StereoTestPlayer::State::Failed || m_stereoTestElapsed.elapsed() > 8000) {
+        finishStereoTest(qtr("VLC cannot start the audio test."));
+        return;
+    }
+    if (state == StereoTestPlayer::State::Complete) { finishStereoTest(); return; }
+    const auto message = state == StereoTestPlayer::State::Left ? qtr("Left channel")
+        : state == StereoTestPlayer::State::Right ? qtr("Right channel")
+        : state == StereoTestPlayer::State::Starting ? qtr("Starting test") : QString();
+    if (message != m_stereoTestMessage) {
+        m_stereoTestMessage = message;
+        emit stereoTestChanged();
+    }
+}
+
 void RedesignPreferences::setAutoSave(bool enabled)
 {
     if (m_autoSave == enabled) return;
@@ -356,6 +434,7 @@ void RedesignPreferences::setAutoSave(bool enabled)
 void RedesignPreferences::setCtx(MainCtx* ctx)
 {
     if (m_ctx == ctx) return;
+    stopStereoTest();
     if (m_ctx) disconnect(m_ctx, &MainCtx::redesignPlayerPreferencesChanged, this, &RedesignPreferences::refresh);
     m_ctx = ctx;
     if (m_ctx) connect(m_ctx, &MainCtx::redesignPlayerPreferencesChanged, this, &RedesignPreferences::refresh);

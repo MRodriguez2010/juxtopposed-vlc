@@ -8,8 +8,11 @@
 #include <QSet>
 #include <QTimer>
 #include <QUrl>
+#include <QElapsedTimer>
+#include <memory>
 #include "maininterface/mainctx.hpp"
 
+class StereoTestPlayer;
 /** A preferences transaction. Edits stay local until save() succeeds. */
 class RedesignPreferences : public QObject
 {
@@ -23,8 +26,11 @@ class RedesignPreferences : public QObject
     Q_PROPERTY(QVariantList playerPresets READ playerPresets NOTIFY changed FINAL)
     Q_PROPERTY(QString selectedPlayerPreset READ selectedPlayerPreset NOTIFY changed FINAL)
     Q_PROPERTY(bool pendingPlayerPreset READ pendingPlayerPreset NOTIFY changed FINAL)
+    Q_PROPERTY(bool stereoTestRunning READ stereoTestRunning NOTIFY stereoTestChanged FINAL)
+    Q_PROPERTY(QString stereoTestMessage READ stereoTestMessage NOTIFY stereoTestChanged FINAL)
 public:
     explicit RedesignPreferences(QObject* parent = nullptr);
+    ~RedesignPreferences() override;
     MainCtx* ctx() const { return m_ctx; }
     void setCtx(MainCtx* ctx);
     bool autoSave() const { return m_autoSave; }
@@ -33,6 +39,10 @@ public:
     int revision() const { return m_revision; }
     QString errorMessage() const { return m_error; }
     Q_INVOKABLE void refresh();
+    bool stereoTestRunning() const { return m_stereoTest != nullptr; }
+    QString stereoTestMessage() const { return m_stereoTestMessage; }
+    Q_INVOKABLE bool startStereoTest();
+    Q_INVOKABLE void stopStereoTest();
     Q_INVOKABLE QStringList subtitleSearchLanguages() const;
     QVariantList playerPresets() const;
     QString selectedPlayerPreset() const;
@@ -67,6 +77,7 @@ signals:
     void ctxChanged();
     void autoSaveChanged();
     void changed();
+    void stereoTestChanged();
 private:
     struct Entry { QString name, category, title; };
     QString audioOutputModule() const;
@@ -78,6 +89,8 @@ private:
     bool storePlayerPresetState(const QVariantMap& state);
     bool playerPresetError(const QString& message);
     bool stagePlayerPresetOptions(const QVariantMap& options);
+    void updateStereoTest();
+    void finishStereoTest(const QString& message = {});
     MainCtx* m_ctx = nullptr;
     QVariantMap m_edits;
     QSet<QString> m_invalid;
@@ -89,5 +102,9 @@ private:
     bool m_presetTransaction = false;
     QVariantMap m_editsBeforePreset;
     QTimer m_saveTimer;
+    QTimer m_stereoTestTimer;
+    QElapsedTimer m_stereoTestElapsed;
+    std::unique_ptr<StereoTestPlayer> m_stereoTest;
+    QString m_stereoTestMessage;
 };
 #endif

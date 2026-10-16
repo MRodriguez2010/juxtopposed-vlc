@@ -13,6 +13,17 @@ TestCase {
     QtObject {
         id: store
         property int revision: 0
+        property bool stereoTestRunning: false
+        property string stereoTestMessage: ""
+        property int stereoStarts: 0
+        property int stereoStops: 0
+        function startStereoTest() {
+            stereoStarts++; stereoTestRunning = true; stereoTestMessage = "Left channel"
+            return true
+        }
+        function stopStereoTest() {
+            stereoStops++; stereoTestRunning = false; stereoTestMessage = ""
+        }
         property var values: ({})
         property var gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         property bool supported: true
@@ -58,6 +69,9 @@ TestCase {
     }
     function item(name) { return findChild(audio, name) }
     function init() {
+        audio.visible = true
+        store.stereoTestRunning = false; store.stereoTestMessage = ""
+        store.stereoStarts = 0; store.stereoStops = 0
         store.values = {"redesign-audio-track": 0, "redesign-audio-language": "Automatic", "redesign-equalizer-preset": "", "equalizer-2pass": false, "equalizer-preamp": 12}
         store.gains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; store.supported = true; store.spatializerSupported = true; store.revision++
         store.lastOption = ""; store.lastValue = undefined
@@ -65,6 +79,34 @@ TestCase {
         stereoChoices.clear(); stereoChoices.append({display: "Mono", checked: false}); stereoChoices.append({display: "Stereo", checked: true})
         item("inlineEqualizer").expanded = false
         wait(20)
+    }
+    function test_stereoTestUsesItsOwnStateAndKeepsPreferences() {
+        const button = item("stereoTestButton")
+        compare(button.caption, "Test")
+        mouseClick(button)
+        compare(store.stereoStarts, 1); compare(button.caption, "Stop")
+        compare(item("stereoTestMessage").text, "Left channel")
+        store.stereoTestMessage = "Right channel"
+        compare(item("stereoTestMessage").text, "Right channel")
+        compare(store.lastOption, ""); compare(stereoRequest, -1)
+        mouseClick(button)
+        compare(store.stereoStops, 1); compare(button.caption, "Test")
+        verify(!item("stereoTestMessage").visible)
+    }
+    function test_hidingAudioStopsTheSoundTest() {
+        mouseClick(item("stereoTestButton"))
+        audio.visible = false
+        compare(store.stereoStops, 1); verify(!store.stereoTestRunning)
+        audio.visible = true
+        verify(!store.stereoTestRunning)
+    }
+    function test_stereoTestSupportsKeyboardActivation() {
+        const button = item("stereoTestButton")
+        button.forceActiveFocus()
+        keyClick(Qt.Key_Space)
+        verify(store.stereoTestRunning)
+        keyClick(Qt.Key_Space)
+        verify(!store.stereoTestRunning)
     }
     function test_audioGroupsFollowReferenceOrder() {
         verify(item("defaultTrackSetting").mapToItem(audio, 0, 0).y < item("stereoModeHeading").y)
