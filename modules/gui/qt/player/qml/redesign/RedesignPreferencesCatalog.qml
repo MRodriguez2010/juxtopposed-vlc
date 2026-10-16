@@ -160,7 +160,7 @@ QtObject {
             ["qt-fs-opacity", qsTr("Fullscreen controls opacity"), {editor: "slider", from: 10, to: 100, factor: 100, suffix: "%"}],
             ["qt-fs-sensitivity", qsTr("Fullscreen controls sensitivity"), {editor: "slider", from: 0, to: 10, step: 1}] ] } ],
         playback: [ {title: "", rows: [ ["input-timeshift-path", qsTr("Time-shift buffer folder")], ["input-timeshift-granularity", qsTr("Time-shift buffer size")] ] } ],
-        audio: [ {title: "", rows: [ ["spdif", qsTr("Pass compressed audio to the receiver")], ["force-dolby-surround", qsTr("Detect Dolby Surround"), {choiceLabels: {0: qsTr("Automatic")}}], ["redesign-resampling-quality", qsTr("Resampling quality"), {dynamicChoices: true}], ["role", qsTr("Media role")],
+        audio: [ {title: "", rows: [ ["redesign-audio-passthrough", qsTr("Pass compressed audio to the receiver"), {dynamicChoices: true}], ["force-dolby-surround", qsTr("Detect Dolby Surround"), {choiceLabels: {0: qsTr("Automatic")}}], ["redesign-resampling-quality", qsTr("Resampling quality"), {dynamicChoices: true}], ["role", qsTr("Media role")],
             ["visualization-size", qsTr("Visualization size"), {dynamicChoices: true}],
             ["aout", qsTr("Audio output driver")], ["stereo-mode", qsTr("Stereo channel mapping"), {choiceLabels: {0: qsTr("Automatic")}}], ["audio-resampler", qsTr("Resampler")], ["filter:audio-filter:spatializer", qsTr("Spatializer"), {spatializer: true}] ] } ],
         video: [ {title: qsTr("Advanced Video"), rows: [ ["custom-aspect-ratios", qsTr("Custom aspect ratios")], ["custom-crop-ratios", qsTr("Custom crop ratios")] ] } ],

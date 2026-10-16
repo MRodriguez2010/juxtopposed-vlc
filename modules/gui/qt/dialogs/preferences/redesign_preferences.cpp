@@ -54,6 +54,16 @@ const ResamplingQuality* resamplingQuality(const QString& module)
     return nullptr;
 }
 
+QString audioPassthroughOption(const QString& module)
+{
+    const auto option = module == QLatin1String("mmdevice") ? QStringLiteral("mmdevice-passthrough")
+        : module == QLatin1String("alsa") ? QStringLiteral("alsa-passthrough")
+        : module == QLatin1String("oss") ? QStringLiteral("oss-spdif")
+        : module == QLatin1String("waveout") ? QStringLiteral("spdif") : QString();
+    const auto* cfg = option.isEmpty() ? nullptr : config_FindConfig(option.toUtf8().constData());
+    return cfg && cfg->psz_text ? option : QString();
+}
+
 QString audioFilterHelp(const QString& name)
 {
     if (name == QLatin1String("equalizer")) return qtr("Change the level of each frequency band.");
@@ -439,6 +449,7 @@ void RedesignPreferences::setCtx(MainCtx* ctx)
     m_ctx = ctx;
     if (m_ctx) connect(m_ctx, &MainCtx::redesignPlayerPreferencesChanged, this, &RedesignPreferences::refresh);
     emit ctxChanged();
+    refresh();
 }
 
 QVariant RedesignPreferences::read(const QByteArray& name)
@@ -788,6 +799,12 @@ bool RedesignPreferences::deletePlayerPreset(const QString& id)
 
 QVariant RedesignPreferences::value(const QString& name) const
 {
+    if (name == QLatin1String("redesign-audio-passthrough")) {
+        const auto option = audioPassthroughOption(audioOutputModule());
+        if (option.isEmpty()) return {};
+        const auto native = value(option);
+        return option == QLatin1String("mmdevice-passthrough") ? QVariant(native.toInt() != 0) : native;
+    }
     if (name == QLatin1String("redesign-resampling-quality")) {
         const auto* quality = resamplingQuality(value(QStringLiteral("audio-resampler")).toString());
         if (!quality) return QStringLiteral("custom");
@@ -876,6 +893,8 @@ QVariant RedesignPreferences::videoValue(const QString& name) const
 
 bool RedesignPreferences::isStaged(const QString& name) const
 {
+    if (name == QLatin1String("redesign-audio-passthrough"))
+        return m_edits.contains(audioPassthroughOption(audioOutputModule()));
     if (name == QLatin1String("redesign-resampling-quality")) {
         if (m_edits.contains(QStringLiteral("audio-resampler"))) return true;
         for (const auto& quality : resamplingQualities)
@@ -891,6 +910,22 @@ bool RedesignPreferences::isStaged(const QString& name) const
 
 QVariantMap RedesignPreferences::describe(const QString& name) const
 {
+    if (name == QLatin1String("redesign-audio-passthrough")) {
+        const auto option = audioPassthroughOption(audioOutputModule());
+        if (option.isEmpty()) return {};
+        auto description = describe(option);
+        if (description.isEmpty()) return {};
+        description.insert(QStringLiteral("name"), name);
+        description.insert(QStringLiteral("title"), qtr("Pass compressed audio to the receiver"));
+        description.insert(QStringLiteral("value"), value(name));
+        description.insert(QStringLiteral("help"), qtr("Send compressed audio to the receiver. The receiver must support the audio format. This setting uses the active audio output."));
+        if (option == QLatin1String("mmdevice-passthrough")) {
+            description.insert(QStringLiteral("kind"), QStringLiteral("bool"));
+            description.insert(QStringLiteral("choices"), QVariantList());
+            description.insert(QStringLiteral("defaultValue"), description.value(QStringLiteral("defaultValue")).toInt() != 0);
+        }
+        return description;
+    }
     if (name == QLatin1String("redesign-resampling-quality")) {
         QVariantList choices{
             QVariantMap{{QStringLiteral("label"), qtr("Low")}, {QStringLiteral("value"), QStringLiteral("low")}},
@@ -1002,6 +1037,8 @@ QVariantMap RedesignPreferences::describe(const QString& name) const
     if (!cfg || !CONFIG_ITEM(cfg->i_type) || !cfg->psz_text) return {};
     QVariantMap result{{QStringLiteral("name"), name}, {QStringLiteral("title"), qtr(cfg->psz_text ? cfg->psz_text : cfg->psz_name)},
         {QStringLiteral("help"), qtr(cfg->psz_longtext ? cfg->psz_longtext : "")}, {QStringLiteral("value"), value(name)}};
+    if (name == QLatin1String("aout"))
+        result.insert(QStringLiteral("help"), qtr("Select an audio output driver. Restart VLC to use a new driver."));
     if (name == QLatin1String("pitch-shift"))
         result.insert(QStringLiteral("help"), qtr("Set the pitch in semitones. Use 0 to turn off this effect. Playback speed does not change."));
     if (name == QLatin1String("audio-spatial") || name == QLatin1String("audio-spatial-mode")) {
@@ -1075,6 +1112,19 @@ QVariantMap RedesignPreferences::describe(const QString& name) const
 
 bool RedesignPreferences::stage(const QString& name, const QVariant& proposed)
 {
+    if (name == QLatin1String("redesign-audio-passthrough")) {
+        const auto option = audioPassthroughOption(audioOutputModule());
+        if (option.isEmpty()) return false;
+        if (option == QLatin1String("mmdevice-passthrough")) {
+            if (proposed.metaType().id() != QMetaType::Bool) return false;
+            // Preserve an existing AC3/DTS-only policy; enable all supported
+            // compressed formats when switching on from Disabled.
+            const int current = value(option).toInt();
+            const int enabled = current > 0 ? current : 2;
+            return stage(option, proposed.toBool() ? enabled : 0);
+        }
+        return stage(option, proposed);
+    }
     if (name == QLatin1String("redesign-resampling-quality")) {
         const auto* quality = resamplingQuality(value(QStringLiteral("audio-resampler")).toString());
         if (!quality) return false;
@@ -1541,6 +1591,22 @@ bool RedesignPreferences::save()
                 if (var_Type(output, bytes.constData()) == 0) var_Create(output, bytes.constData(), VLC_VAR_FLOAT);
                 var_SetFloat(output, bytes.constData(), value(name).toFloat());
             }
+            aout_Release(output);
+        }
+    }
+    const auto passthrough = audioPassthroughOption(audioOutputModule());
+    if (!passthrough.isEmpty() && previous.contains(passthrough)) {
+        audio_output_t* output = vlc_player_aout_Hold(player);
+        if (output) {
+            const auto bytes = passthrough.toUtf8();
+            const bool boolean = config_GetType(bytes.constData()) == CONFIG_ITEM_BOOL;
+            if (var_Type(output, bytes.constData()) == 0)
+                var_Create(output, bytes.constData(), boolean ? VLC_VAR_BOOL : VLC_VAR_INTEGER);
+            if (boolean) var_SetBool(output, bytes.constData(), value(passthrough).toBool());
+            else var_SetInteger(output, bytes.constData(), value(passthrough).toLongLong());
+            // A compressed stream can require a different decoder after the
+            // output policy changes, even when the device is unchanged.
+            aout_RestartRequest(output, true);
             aout_Release(output);
         }
     }

@@ -159,6 +159,30 @@ TestCase {
         visible: false
     }
     SignalSpy { id: actionSpy; target: actionRow; signalName: "actionRequested" }
+    property bool passthroughTestActive: false
+    QtObject {
+        id: passthroughStore
+        property int revision: 0
+        property string driver: "mmdevice"
+        property var currentValue: false
+        property var lastValue
+        function value(name) { return currentValue }
+        function stage(name, value) { lastValue = value; currentValue = value; revision++; return true }
+        function describe(name) {
+            if (driver === "automatic") return {}
+            if (driver === "mmdevice") return {kind: "bool", defaultValue: false, choices: []}
+            return {kind: "integer", defaultValue: 0, minimum: 0, maximum: 2,
+                choices: [{label: "None", value: 0}, {label: "S/PDIF", value: 1}, {label: "HDMI", value: 2}]}
+        }
+    }
+    RedesignPreferenceRow {
+        id: passthroughRow
+        y: 350; width: parent.width
+        backend: passthroughStore; optionName: "redesign-audio-passthrough"
+        label: "Pass compressed audio to the receiver"
+        presentation: catalog.advancedSections.audio[0].rows.find(row => row[0] === passthroughRow.optionName)?.[2] || ({})
+        visible: available && testCase.passthroughTestActive
+    }
     RedesignPreferenceRow {
         id: spatialModeRow
         y: 350; width: parent.width
@@ -196,6 +220,8 @@ TestCase {
     SignalSpy { id: confirmationAccepted; target: confirmation; signalName: "accepted" }
     SignalSpy { id: confirmationRejected; target: confirmation; signalName: "rejected" }
     function init() {
+        passthroughTestActive = false
+        passthroughStore.driver = "mmdevice"; passthroughStore.currentValue = false; passthroughStore.revision++
         store.providedHelp = ""
         defaults.visible = false; defaults.subtitles = false
         confirmation.close(); confirmationAccepted.clear(); confirmationRejected.clear()
@@ -208,6 +234,25 @@ TestCase {
         store.values = {resize: true, fastSeek: false, timeout: 1800, clickPolicy: "auto", "volume-save": true, "redesign-startup-volume": 200, device: "", volumeStep: 12.800000190734863, "audio-spatial": false, "audio-spatial-mode": 2}
         store.revision++
         wait(20)
+    }
+    function test_passthroughEditorUsesCurrentDriverMetadata() {
+        passthroughTestActive = true
+        let toggle = findChild(passthroughRow, "preferenceToggleEditor")
+        verify(toggle !== null)
+        mouseClick(toggle)
+        compare(passthroughStore.lastValue, true)
+        passthroughStore.driver = "alsa"; passthroughStore.currentValue = 2; passthroughStore.revision++
+        tryVerify(() => findChild(passthroughRow, "preferenceChoiceEditor") !== null)
+        const choice = findChild(passthroughRow, "preferenceChoiceEditor")
+        compare(choice.currentValue, 2)
+        choice.currentIndex = 1; choice.activated(1)
+        compare(passthroughStore.lastValue, 1)
+        passthroughStore.driver = "automatic"; passthroughStore.revision++
+        tryCompare(passthroughRow, "visible", false)
+        passthroughStore.driver = "mmdevice"; passthroughStore.currentValue = false; passthroughStore.revision++
+        tryCompare(passthroughRow, "visible", true)
+        toggle = findChild(passthroughRow, "preferenceToggleEditor")
+        verify(toggle !== null); verify(!toggle.checked)
     }
     function editTrack(text) {
         const field = findChild(defaults, "preferenceTrackEditor")
