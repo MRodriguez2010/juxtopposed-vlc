@@ -319,6 +319,7 @@ skip_uninstall32_cleanup:
   !insertmacro InstallFolder plugins
 @HAVE_NLS_TRUE@ !insertmacro InstallFolderOptional locale
   !insertmacro InstallFolder hrtfs
+  !insertmacro InstallFolder visualization
 @BUILD_SKINS_TRUE@   !insertmacro InstallFolder skins
 @BUILD_LUA_TRUE@     !insertmacro InstallFolder lua
 

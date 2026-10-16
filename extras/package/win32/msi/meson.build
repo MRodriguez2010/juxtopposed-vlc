@@ -45,7 +45,7 @@ vlc_wix = configure_file(
     install_dir: '.',
 )
 
-heat_dirs = ['Plugins']
+heat_dirs = ['Plugins', 'Visualization']
 if wix_conf.get('ENABLE_NLS', 0) == 1
     heat_dirs += 'Locale'
 endif

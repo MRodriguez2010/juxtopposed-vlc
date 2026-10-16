@@ -98,6 +98,7 @@ endif
 
 # HRTF
 	cp -r $(srcdir)/share/hrtfs $(win32_destdir)/
+	cp -r $(pkgdatadir)/visualization $(win32_destdir)/
 
 # Convert to DOS line endings
 	find $(win32_destdir) -type f \( -name "*xml" -or -name "*html" -or -name '*js' -or -name '*css' -or -name '*hosts' -or -iname '*txt' -or -name '*.cfg' -or -name '*.lua' \) -exec $(U2D) -q {} \;

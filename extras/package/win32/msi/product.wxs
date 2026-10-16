@@ -300,6 +300,7 @@
             <ComponentRef Id='CompProgramMenuShortcuts' />
 
             <ComponentGroupRef Id='CompPluginsGroup' />
+            <ComponentGroupRef Id='CompVisualizationGroup' />
             <?if "$(var.HaveLocale)" = "yes" ?>
                 <ComponentGroupRef Id='CompLocaleGroup' />
             <?endif ?>

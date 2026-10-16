@@ -2,6 +2,20 @@ CLEANFILES = skins2/default.vlt
 MOSTLYCLEANFILES =
 EXTRA_DIST =
 
+# Preset filenames contain spaces and punctuation. Keep them out of make's
+# whitespace-delimited DATA lists and quote each path during installation.
+EXTRA_DIST += visualization
+install-data-local:
+	$(MKDIR_P) "$(DESTDIR)$(pkgdatadir)/visualization"
+	@for file in "$(srcdir)"/visualization/*.milk; do \
+		$(INSTALL_DATA) "$$file" "$(DESTDIR)$(pkgdatadir)/visualization/" || exit $$?; \
+	done
+
+uninstall-local:
+	@for file in "$(srcdir)"/visualization/*.milk; do \
+		rm -f "$(DESTDIR)$(pkgdatadir)/visualization/$${file##*/}" || exit $$?; \
+	done
+
 LUA_MODULES = \
 	lua/extensions/VLSub.lua \
 	lua/intf/cli.lua \
