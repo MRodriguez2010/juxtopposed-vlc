@@ -221,6 +221,8 @@ static bool check_context(vlc_object_t *root, unsigned width, unsigned height,
             vt->BindFramebuffer(GL_FRAMEBUFFER, renderer_fbo);
             vt->BindBuffer(GL_PIXEL_PACK_BUFFER, renderer_pbo);
             vt->Viewport(3, 4, 5, 6);
+            /* A client can leave an unrelated error pending after rendering. */
+            vt->Enable((GLenum)UINT_MAX);
             assert(vlc_gl_ResizeOffscreen(gl, sizes[i][0], sizes[i][1]) == VLC_SUCCESS);
             check_integer(vt, GL_READ_FRAMEBUFFER_BINDING, renderer_fbo);
             check_integer(vt, GL_DRAW_FRAMEBUFFER_BINDING, renderer_fbo);

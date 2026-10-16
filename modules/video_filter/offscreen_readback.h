@@ -14,6 +14,12 @@ static inline bool offscreen_AllocBuffers(const opengl_vtable_t *vt,
                                           GLuint *buffers, unsigned count,
                                           unsigned width, unsigned height)
 {
+    /* Renderer errors from the previous frame do not describe this allocation.
+     * Bound the drain so a lost context cannot leave us spinning here. */
+    unsigned errors = 0;
+    while (vt->GetError() != GL_NO_ERROR)
+        if (++errors == 16)
+            return false;
     GLint previous;
     vt->GetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous);
     vt->GenBuffers(count, buffers);
