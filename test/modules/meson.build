@@ -7,6 +7,19 @@ vlc_tests += {
     'env': ['VLC_PLUGIN_PATH=' + vlc_build_root / 'modules'],
 }
 
+if opengl_dep.found() and (host_system == 'windows' or egl_dep.found())
+    vlc_tests += {
+        'name': 'test_modules_visualization_gl_resize',
+        'sources': files('visualization/resize.c'),
+        'suite': ['modules', 'test_modules'],
+        'link_with': [libvlc, libvlccore],
+        'c_args': ['-DVISUAL_RESIZE_TEST_GL'],
+        'module_depends': vlc_plugins_targets.keys(),
+        'env': ['VLC_PLUGIN_PATH=' + vlc_build_root / 'modules'],
+    }
+endif
+
+
 vlc_tests += {
     'name' : 'test_modules_lua_extension',
     'sources' : files('lua/extension.c'),

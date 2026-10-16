@@ -39,6 +39,7 @@
 
 #include "visual/fft.h"
 #include "visual/window.h"
+#include "opengl_vout.h"
 
 #include "../video_output/opengl/gl_common.h"
 
@@ -137,6 +138,7 @@ typedef struct
     int16_t *p_prev_s16_buff;
 
     /* Opengl */
+    struct visualization_gl *canvas;
     vlc_gl_t *gl;
     struct glspectrum_opengl_vtable vt;
 
@@ -194,16 +196,10 @@ static int Open(vlc_object_t * p_this)
     vlc_queue_Init(&p_sys->queue, offsetof (block_t, p_next));
     p_sys->dead = false;
 
-    /* Create the openGL provider */
-    vlc_window_cfg_t cfg = {
-        .is_decorated = true,
-        .width = var_InheritInteger(p_filter, "glspectrum-width"),
-        .height = var_InheritInteger(p_filter, "glspectrum-height"),
-    };
-
-    p_sys->gl = vlc_gl_surface_Create(p_this, &cfg, NULL, NULL);
-    if (p_sys->gl == NULL)
+    p_sys->canvas = visualization_gl_New(p_filter, "glspectrum-width", "glspectrum-height");
+    if (p_sys->canvas == NULL)
         return VLC_EGENERIC;
+    p_sys->gl = p_sys->canvas->gl;
 
     if (vlc_gl_MakeCurrent(p_sys->gl) != VLC_SUCCESS)
     {
@@ -225,7 +221,7 @@ static int Open(vlc_object_t * p_this)
 
     /* Create the thread */
     if (vlc_clone(&p_sys->thread, Thread, p_filter)) {
-        vlc_gl_surface_Destroy(p_sys->gl);
+        visualization_gl_Delete(p_sys->canvas);
         return VLC_ENOMEM;
     }
 
@@ -236,7 +232,7 @@ static int Open(vlc_object_t * p_this)
     return VLC_SUCCESS;
 
 error:
-    vlc_gl_surface_Destroy(p_sys->gl);
+    visualization_gl_Delete(p_sys->canvas);
     return VLC_EGENERIC;
 }
 
@@ -251,11 +247,16 @@ static void Close(filter_t *p_filter)
 
     /* Terminate the thread. */
     vlc_queue_Kill(&p_sys->queue, &p_sys->dead);
+    visualization_gl_Stop(p_sys->canvas);
     vlc_join(p_sys->thread, NULL);
 
     /* Free the resources */
-    vlc_gl_surface_Destroy(p_sys->gl);
+    visualization_gl_Delete(p_sys->canvas);
     free(p_sys->p_prev_s16_buff);
+    vlc_queue_Lock(&p_sys->queue);
+    block_t *pending = vlc_queue_DequeueAllUnlocked(&p_sys->queue);
+    vlc_queue_Unlock(&p_sys->queue);
+    block_ChainRelease(pending);
 }
 
 
@@ -268,7 +269,21 @@ static block_t *DoWork(filter_t *p_filter, block_t *p_in_buf)
 {
     filter_sys_t *p_sys = p_filter->p_sys;
 
-    vlc_queue_Enqueue(&p_sys->queue, block_Duplicate(p_in_buf));
+    block_t *copy = block_Duplicate(p_in_buf);
+    if (copy == NULL)
+        return p_in_buf;
+    vlc_queue_Lock(&p_sys->queue);
+    block_t *pending = vlc_queue_DequeueAllUnlocked(&p_sys->queue);
+    if (!p_sys->dead)
+    {
+        vlc_queue_EnqueueUnlocked(&p_sys->queue, copy);
+        vlc_queue_Signal(&p_sys->queue);
+        copy = NULL;
+    }
+    vlc_queue_Unlock(&p_sys->queue);
+    block_ChainRelease(pending);
+    if (copy)
+        block_Release(copy);
     return p_in_buf;
 }
 
@@ -446,10 +461,23 @@ static void *Thread( void *p_data )
 
     while ((block = vlc_queue_DequeueKillable(&p_sys->queue, &p_sys->dead)))
     {
-        unsigned win_width, win_height;
-
-        if (vlc_gl_surface_CheckSize(gl, &win_width, &win_height))
-            vt->Viewport(0, 0, win_width, win_height);
+        if (block->i_pts == VLC_TICK_INVALID || !visualization_gl_UpdateSize(p_sys->canvas))
+        {
+            block_Release(block);
+            if (p_sys->canvas->context_failed)
+                break;
+            continue;
+        }
+        picture_t *output = visualization_gl_Acquire(p_sys->canvas);
+        if (output == NULL)
+        {
+            block_Release(block);
+            continue;
+        }
+        unsigned canvas_width = p_sys->canvas->format.i_width;
+        unsigned canvas_height = p_sys->canvas->format.i_height;
+        unsigned side = __MIN(canvas_width, canvas_height);
+        vt->Viewport((canvas_width - side) / 2, (canvas_height - side) / 2, side, side);
 
         /* Horizontal scale for 20-band equalizer */
         const unsigned xscale[] = {0,1,2,3,4,5,6,7,8,11,15,20,27,
@@ -569,16 +597,19 @@ static void *Thread( void *p_data )
             drawBars(p_filter, height);
         vt->PopMatrix();
 
-        /* Wait to swapp the frame on time. */
-        vlc_tick_wait(block->i_pts + (block->i_length / 2));
-        vlc_gl_Swap(gl);
+        /* The shared vout schedules this media timestamp on the audio clock. */
+        visualization_gl_Present(p_sys->canvas, output, block->i_pts + block->i_length / 2);
+        output = NULL;
 
 release:
+        if (output)
+            picture_Release(output);
         window_close(&wind_ctx);
         fft_close(p_state);
         block_Release(block);
     }
-    vlc_gl_ReleaseCurrent(gl);
+    if (!p_sys->canvas->context_failed)
+        vlc_gl_ReleaseCurrent(gl);
 
     return NULL;
 }

@@ -11,7 +11,7 @@ visu_RPATH += -rpath '$(visudir)'
 endif
 
 libglspectrum_plugin_la_SOURCES = \
-	visualization/glspectrum.c \
+	visualization/glspectrum.c visualization/opengl_vout.h visualization/size.h \
 	visualization/visual/fft.c visualization/visual/fft.h \
 	visualization/visual/window.c visualization/visual/window.h \
 	visualization/visual/window_presets.h

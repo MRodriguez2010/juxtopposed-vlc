@@ -118,6 +118,7 @@ check_PROGRAMS += $(player_programs)
 
 if HAVE_GL
 check_PROGRAMS += \
+	test_modules_visualization_gl_resize \
 	test_modules_video_output_opengl_offscreen \
 	test_modules_video_output_opengl_filters \
 	test_modules_video_output_opengl_sub_renderer
@@ -498,6 +499,9 @@ test_modules_video_output_opengl_filters_SOURCES = \
 	../modules/video_output/opengl/interop.h \
 	../modules/video_output/opengl/importer.c \
 	../modules/video_output/opengl/importer.h
+test_modules_visualization_gl_resize_SOURCES = modules/visualization/resize.c
+test_modules_visualization_gl_resize_CPPFLAGS = $(AM_CPPFLAGS) -DVISUAL_RESIZE_TEST_GL
+test_modules_visualization_gl_resize_LDADD = $(LIBVLCCORE) $(LIBVLC)
 test_modules_video_output_opengl_offscreen_SOURCES = modules/video_output/opengl/offscreen.c
 test_modules_video_output_opengl_offscreen_LDADD = $(LIBVLCCORE) $(LIBVLC) ../modules/libvlc_opengl.la
 test_modules_video_output_opengl_offscreen_CPPFLAGS = $(AM_CPPFLAGS)
