@@ -51,6 +51,16 @@ enum vlc_gl_api_type {
     VLC_OPENGL_ES2,
 };
 
+/** Request a readable default framebuffer for an offscreen context.
+ *
+ * Combine with VLC_OPENGL or VLC_OPENGL_ES2 in vlc_gl_CreateOffscreen().
+ * The provider binds framebuffer zero when the context becomes current. This
+ * supports renderers that bind framebuffer zero themselves, instead of drawing
+ * into the framebuffer supplied by the usual offscreen providers.
+ * Providers that cannot supply this mode are not selected.
+ */
+#define VLC_GL_OFFSCREEN_DEFAULT_FRAMEBUFFER 0x100u
+
 struct vlc_gl_cfg
 {
     bool need_alpha; /* False by default */
@@ -74,6 +84,10 @@ typedef int (*vlc_gl_activate)(vlc_gl_t *, unsigned width, unsigned height,
     set_callback_opengl_common(activate) \
     set_capability("opengl offscreen", priority)
 
+#define set_callback_opengl_offscreen_default(activate, priority) \
+    set_callback_opengl_common(activate) \
+    set_capability("opengl offscreen default", priority)
+
 #define set_callback_opengl_es2(activate, priority) \
     set_callback_opengl_common(activate) \
     set_capability("opengl es2", priority)
@@ -81,6 +95,10 @@ typedef int (*vlc_gl_activate)(vlc_gl_t *, unsigned width, unsigned height,
 #define set_callback_opengl_es2_offscreen(activate, priority) \
     set_callback_opengl_common(activate) \
     set_capability("opengl es2 offscreen", priority)
+
+#define set_callback_opengl_es2_offscreen_default(activate, priority) \
+    set_callback_opengl_common(activate) \
+    set_capability("opengl es2 offscreen default", priority)
 
 struct vlc_gl_operations
 {
@@ -137,6 +155,23 @@ struct vlc_gl_t
 VLC_API vlc_gl_t *vlc_gl_Create(const struct vout_display_cfg *cfg,
                                 unsigned flags, const char *name,
                                 const struct vlc_gl_cfg *gl_cfg) VLC_USED;
+/**
+ * Creates an offscreen OpenGL context with the requested canvas dimensions.
+ *
+ * \param parent parent object
+ * \param device optional decoder device
+ * \param width canvas width in pixels
+ * \param height canvas height in pixels
+ * \param flags VLC_OPENGL or VLC_OPENGL_ES2, optionally combined with
+ *              VLC_GL_OFFSCREEN_DEFAULT_FRAMEBUFFER
+ * \param name provider name, or NULL for automatic selection
+ * \param gl_cfg optional configuration
+ * \return a new context, or NULL if the request cannot be supported
+ *
+ * Release all pictures returned by vlc_gl_SwapOffscreen() before deleting the
+ * context. A provider can use a bounded picture pool, so retaining every slot
+ * can block further swaps until a picture is released.
+ */
 VLC_API vlc_gl_t *vlc_gl_CreateOffscreen(vlc_object_t *parent,
                                          struct vlc_decoder_device *device,
                                          unsigned width, unsigned height,
@@ -166,6 +201,13 @@ static inline void vlc_gl_Swap(vlc_gl_t *gl)
     gl->ops->swap(gl);
 }
 
+/**
+ * Returns the rendered offscreen image, or NULL on failure.
+ *
+ * The caller owns the returned picture and must release it before deleting the
+ * context. Its orientation is given by the provider. In default-framebuffer
+ * mode, capture preserves the renderer's draw target and pixel packing state.
+ */
 static inline picture_t *vlc_gl_SwapOffscreen(vlc_gl_t *gl)
 {
     return gl->ops->swap_offscreen(gl);

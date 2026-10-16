@@ -124,14 +124,15 @@ vlc_gl_t *vlc_gl_CreateOffscreen(vlc_object_t *parent,
     if (gl_cfg == NULL)
         gl_cfg = &gl_cfg_default;
 
-    switch (flags /*& VLC_OPENGL_API_MASK*/)
+    const bool default_framebuffer = flags & VLC_GL_OFFSCREEN_DEFAULT_FRAMEBUFFER;
+    switch (flags & ~VLC_GL_OFFSCREEN_DEFAULT_FRAMEBUFFER)
     {
         case VLC_OPENGL:
-            type = "opengl offscreen";
+            type = default_framebuffer ? "opengl offscreen default" : "opengl offscreen";
             api_type = VLC_OPENGL;
             break;
         case VLC_OPENGL_ES2:
-            type = "opengl es2 offscreen";
+            type = default_framebuffer ? "opengl es2 offscreen default" : "opengl es2 offscreen";
             api_type = VLC_OPENGL_ES2;
             break;
         default:

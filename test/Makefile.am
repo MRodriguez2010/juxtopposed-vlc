@@ -118,6 +118,7 @@ check_PROGRAMS += $(player_programs)
 
 if HAVE_GL
 check_PROGRAMS += \
+	test_modules_video_output_opengl_offscreen \
 	test_modules_video_output_opengl_filters \
 	test_modules_video_output_opengl_sub_renderer
 endif
@@ -497,6 +498,19 @@ test_modules_video_output_opengl_filters_SOURCES = \
 	../modules/video_output/opengl/interop.h \
 	../modules/video_output/opengl/importer.c \
 	../modules/video_output/opengl/importer.h
+test_modules_video_output_opengl_offscreen_SOURCES = modules/video_output/opengl/offscreen.c
+test_modules_video_output_opengl_offscreen_LDADD = $(LIBVLCCORE) $(LIBVLC) ../modules/libvlc_opengl.la
+test_modules_video_output_opengl_offscreen_CPPFLAGS = $(AM_CPPFLAGS)
+if HAVE_GL
+if HAVE_EGL
+check_PROGRAMS += test_modules_video_output_opengl_es2_offscreen
+test_modules_video_output_opengl_offscreen_CPPFLAGS += -DVLC_TEST_EXTERNAL_EGL $(EGL_FLAGS)
+test_modules_video_output_opengl_offscreen_LDADD += $(EGL_LIBS)
+test_modules_video_output_opengl_es2_offscreen_SOURCES = $(test_modules_video_output_opengl_offscreen_SOURCES)
+test_modules_video_output_opengl_es2_offscreen_CPPFLAGS = $(AM_CPPFLAGS) -DVLC_TEST_OPENGL_API=VLC_OPENGL_ES2 -DVLC_TEST_EXTERNAL_EGL $(EGL_FLAGS)
+test_modules_video_output_opengl_es2_offscreen_LDADD = $(LIBVLCCORE) $(LIBVLC) ../modules/libvlc_opengl.la $(EGL_LIBS)
+endif
+endif
 test_modules_video_output_opengl_filters_LDADD = $(LIBVLCCORE) $(LIBVLC) ../modules/libvlc_opengl.la
 test_modules_video_output_opengl_filters_CPPFLAGS = $(AM_CPPFLAGS) -DVLC_TEST_OPENGL_API=VLC_OPENGL
 test_modules_video_output_opengl_es2_filters_SOURCES = $(test_modules_video_output_opengl_filters_SOURCES)

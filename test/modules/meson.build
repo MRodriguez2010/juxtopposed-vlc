@@ -195,6 +195,22 @@ vlc_tests += {
     'module_depends' : vlc_plugins_targets.keys()
 }
 
+if opengl_dep.found() and (host_system == 'windows' or egl_dep.found())
+    foreach api, api_flag : {'opengl': 'VLC_OPENGL', 'opengl_es2': 'VLC_OPENGL_ES2'}
+        if api == 'opengl' or host_system != 'windows'
+            vlc_tests += {
+                'name': 'test_modules_video_output_' + api + '_offscreen',
+                'sources': files('video_output/opengl/offscreen.c'),
+                'suite': ['modules', 'test_modules'],
+                'link_with': [libvlc, libvlccore, libvlc_opengl],
+                'dependencies': host_system == 'windows' ? [] : [egl_dep],
+                'c_args': ['-DVLC_TEST_OPENGL_API=' + api_flag] + (host_system == 'windows' ? [] : ['-DVLC_TEST_EXTERNAL_EGL']),
+                'module_depends': host_system == 'windows' ? ['opengl_win_offscreen'] : ['egl_pbuffer_filter', 'egl_display_generic'],
+            }
+        endif
+    endforeach
+endif
+
 vlc_tests += {
     'name' : 'test_modules_video_output_opengl_filters',
     'sources' : files(

@@ -58,21 +58,25 @@ Open(struct vlc_egl_display *display)
 #elif defined(EGL_KHR_display_reference)
     const char *extensions = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
 
-    if (!vlc_gl_StrHasToken(extensions, "EGL_KHR_display_reference"))
-        return VLC_EGENERIC;
-
     EGLenum platform = GetPlatform(extensions);
-    if (!platform)
-        return VLC_EGENERIC;
 
     const EGLAttrib attribs[] = {
         EGL_TRACK_REFERENCES_KHR, EGL_TRUE,
         EGL_NONE,
     };
 
-    display->display =
-        eglGetPlatformDisplay(platform, EGL_DEFAULT_DISPLAY, attribs);
+    if (platform && vlc_gl_StrHasToken(extensions, "EGL_KHR_display_reference"))
+        display->display =
+            eglGetPlatformDisplay(platform, EGL_DEFAULT_DISPLAY, attribs);
 #endif
+
+    /* Keep an untracked default display initialized. Other components may own
+     * contexts on it that the offscreen wrapper cannot count. */
+    if (display->display == EGL_NO_DISPLAY)
+    {
+        display->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+        display->skip_terminate = true;
+    }
 
     if (display->display == EGL_NO_DISPLAY)
         return VLC_EGENERIC;

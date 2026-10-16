@@ -11,6 +11,7 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
+#include <limits.h>
 
 #include <vlc_common.h>
 #include <vlc_plugin.h>
@@ -27,6 +28,8 @@
 #include "../video_output/opengl/interop.h"
 #include <GL/glew.h>
 #include <GL/wglew.h>
+
+#include "offscreen_readback.h"
 
 #define BUFFER_COUNT 4
 
@@ -69,6 +72,9 @@ struct vlc_gl_pbuffer
     struct pbo_picture_context     picture_contexts[BUFFER_COUNT];
 
     bool current;
+    bool default_framebuffer;
+    offscreen_read_buffer_fn read_buffer;
+    GLint default_read_buffer;
 };
 
 static int MakeCurrentBare (vlc_gl_t *gl)
@@ -94,8 +100,8 @@ static int MakeBoundCurrent (vlc_gl_t *gl)
     sys->current = true;
 
     const opengl_vtable_t *vt = &sys->api.vt;
-    vt->BindBuffer(GL_PIXEL_PACK_BUFFER, sys->pixelbuffers[sys->current_flip]);
-    vt->BindFramebuffer(GL_FRAMEBUFFER, sys->framebuffers[sys->current_flip]);
+    vt->BindBuffer(GL_PIXEL_PACK_BUFFER, sys->default_framebuffer ? 0 : sys->pixelbuffers[sys->current_flip]);
+    vt->BindFramebuffer(GL_FRAMEBUFFER, sys->default_framebuffer ? 0 : sys->framebuffers[sys->current_flip]);
 
     return VLC_SUCCESS;
 }
@@ -171,7 +177,8 @@ out_loop:
     vlc_mutex_unlock(&sys->lock);
 
     sys->current_flip = index;
-    BindDrawFramebuffer(sys);
+    if (!sys->default_framebuffer)
+        BindDrawFramebuffer(sys);
 }
 
 static picture_t *Swap(vlc_gl_t *gl)
@@ -179,33 +186,41 @@ static picture_t *Swap(vlc_gl_t *gl)
     struct vlc_gl_pbuffer *sys = gl->sys;
     const opengl_vtable_t *vt = &sys->api.vt;
 
-    if (!sys->current)
-        MakeCurrentBare(gl);
+    if (!sys->current && MakeCurrentBare(gl) != VLC_SUCCESS)
+        return NULL;
 
     /* Read current framebuffer */
     struct pbo_picture_context *context =
         &sys->picture_contexts[sys->current_flip];
 
-    vt->BindBuffer(GL_PIXEL_PACK_BUFFER, sys->pixelbuffers[sys->current_flip]);
-    vt->BindFramebuffer(GL_FRAMEBUFFER, sys->framebuffers[sys->current_flip]);
-    if (context->buffer_mapping != NULL)
-        vt->UnmapBuffer(GL_PIXEL_PACK_BUFFER);
-
-    GLsizei width = sys->fmt_out.i_visible_width;
-    GLsizei height = sys->fmt_out.i_visible_height;
-    GLenum format = GL_RGBA;
-
-    vt->ReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, 0);
-
-    void *pixels = vt->MapBufferRange(
-            GL_PIXEL_PACK_BUFFER, 0, width*height*4, GL_MAP_READ_BIT);
-
-    GLsizei stride;
-    vt->GetIntegerv(GL_PACK_ROW_LENGTH, &stride);
-    stride = width;
-
+    const unsigned width = sys->fmt_out.i_visible_width;
+    const unsigned height = sys->fmt_out.i_visible_height;
+    void *pixels;
+    if (sys->default_framebuffer)
+        pixels = offscreen_ReadDefault(vt, sys->read_buffer,
+                                        sys->default_read_buffer,
+                                        sys->pixelbuffers[sys->current_flip],
+                                        context->buffer_mapping != NULL, width, height);
+    else
+    {
+        vt->BindBuffer(GL_PIXEL_PACK_BUFFER, sys->pixelbuffers[sys->current_flip]);
+        vt->BindFramebuffer(GL_FRAMEBUFFER, sys->framebuffers[sys->current_flip]);
+        if (context->buffer_mapping != NULL)
+            vt->UnmapBuffer(GL_PIXEL_PACK_BUFFER);
+        vt->ReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        pixels = vt->MapBufferRange(GL_PIXEL_PACK_BUFFER, 0,
+                                    (size_t)width * height * 4, GL_MAP_READ_BIT);
+    }
     context->buffer_mapping = pixels;
-    context->rc ++;
+    if (pixels == NULL)
+    {
+        if (!sys->current)
+            wglMakeCurrent(NULL, NULL);
+        return NULL;
+    }
+    vlc_mutex_lock(&sys->lock);
+    context->rc++;
+    vlc_mutex_unlock(&sys->lock);
 
     /* Swap framebuffer */
     UpdateBuffer(gl);
@@ -220,7 +235,7 @@ static picture_t *Swap(vlc_gl_t *gl)
 
     pict_resource.p[0].p_pixels = pixels;
     pict_resource.p[0].i_lines = height;
-    pict_resource.p[0].i_pitch = stride * 4;
+    pict_resource.p[0].i_pitch = width * 4;
 
 
     picture_t *output = picture_NewFromResource(&sys->fmt_out, &pict_resource);
@@ -228,12 +243,11 @@ static picture_t *Swap(vlc_gl_t *gl)
         goto error;
 
     output->context = (picture_context_t *)context;
-    output->context->vctx = NULL;
 
     return output;
 
 error:
-    context->rc--;
+    picture_context_destroy(&context->context);
     return NULL;
 }
 
@@ -242,11 +256,13 @@ static void Close( vlc_gl_t *gl )
     struct vlc_gl_pbuffer *sys = gl->sys;
     const opengl_vtable_t *vt = &sys->api.vt;
 
-    wglMakeCurrent(sys->pixelBufferDC, sys->hGLRC);
-    vt->DeleteBuffers(BUFFER_COUNT, sys->pixelbuffers);
-    vt->DeleteFramebuffers(BUFFER_COUNT, sys->framebuffers);
-    vt->DeleteTextures(BUFFER_COUNT, sys->textures);
-    wglMakeCurrent(NULL, NULL);
+    if (MakeCurrentBare(gl) == VLC_SUCCESS)
+    {
+        vt->DeleteBuffers(BUFFER_COUNT, sys->pixelbuffers);
+        vt->DeleteFramebuffers(BUFFER_COUNT, sys->framebuffers);
+        vt->DeleteTextures(BUFFER_COUNT, sys->textures);
+        wglMakeCurrent(NULL, NULL);
+    }
 
     wglDeleteContext(sys->hGLRC);
     sys->wgl_vt.ReleasePbufferDCARB(sys->hbuffer, sys->pixelBufferDC);
@@ -272,9 +288,13 @@ static int LoadWGLExt(vlc_gl_t *gl, struct wgl_vt *wgl_vt)
     return VLC_SUCCESS;
 }
 
-static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
-                const struct vlc_gl_cfg *gl_cfg)
+static int OpenCommon(vlc_gl_t *gl, unsigned width, unsigned height,
+                      const struct vlc_gl_cfg *gl_cfg, bool default_framebuffer)
 {
+    if (width == 0 || height == 0 || width > INT_MAX / 4 || height > INT_MAX
+        || (uint64_t)width * height > PTRDIFF_MAX / 4)
+        return VLC_EGENERIC;
+
     if (gl_cfg->need_alpha)
     {
         msg_Err(gl, "Cannot support alpha yet");
@@ -284,13 +304,16 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
     struct vlc_gl_pbuffer *sys = vlc_obj_malloc(&gl->obj, sizeof *sys);
     if (sys == NULL)
         return VLC_ENOMEM;
+    memset(sys, 0, sizeof(*sys));
     sys->hbuffer = NULL;
     sys->pixelBufferDC = NULL;
 
+    HWND tmpWindow = NULL;
     HDC tmpScreenDC = NULL;
     HGLRC tmpGLRC = NULL;
 
     sys->current = false;
+    sys->default_framebuffer = default_framebuffer;
 
     video_format_Init(&sys->fmt_out, VLC_CODEC_RGBA);
     sys->fmt_out.i_visible_width
@@ -326,7 +349,13 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
     gl->ops = &gl_ops;
     gl->orientation = ORIENT_VFLIPPED;
 
-    tmpScreenDC = GetDC(NULL);
+    /* WGL needs a window DC with its own pixel format. The desktop DC cannot
+     * reliably be used to create the temporary extension-loading context. */
+    tmpWindow = CreateWindowExW(0, L"STATIC", NULL, WS_POPUP, 0, 0, 1, 1,
+                                NULL, NULL, GetModuleHandleW(NULL), NULL);
+    if (tmpWindow == NULL)
+        goto error1;
+    tmpScreenDC = GetDC(tmpWindow);
     if(unlikely(tmpScreenDC == NULL))
     {
         msg_Err(gl, "Failed to get a temporary DeviceContext");
@@ -342,7 +371,9 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
         .cDepthBits = 16,
         .iLayerType = PFD_MAIN_PLANE,
     };
-    SetPixelFormat(tmpScreenDC, ChoosePixelFormat(tmpScreenDC, &pfd), &pfd);
+    int pixel_format = ChoosePixelFormat(tmpScreenDC, &pfd);
+    if (pixel_format == 0 || !SetPixelFormat(tmpScreenDC, pixel_format, &pfd))
+        goto error1;
     tmpGLRC = wglCreateContext(tmpScreenDC);
     if (tmpGLRC == NULL)
     {
@@ -378,6 +409,7 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
         WGL_SUPPORT_OPENGL_ARB,  GL_TRUE,
         WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
         WGL_DEPTH_BITS_ARB, 24,
+        WGL_STENCIL_BITS_ARB, default_framebuffer ? 8 : 0,
         WGL_RED_BITS_ARB,   8,
         WGL_GREEN_BITS_ARB, 8,
         WGL_BLUE_BITS_ARB,  8,
@@ -388,7 +420,7 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
     int pixelFormats[50] = {0};
     UINT formats_count = 0;
     BOOL gotFormat = sys->wgl_vt.ChoosePixelFormatARB(tmpScreenDC, formatAttributes, fAttributes, ARRAY_SIZE(pixelFormats), pixelFormats, &formats_count);
-    if (!gotFormat)
+    if (!gotFormat || formats_count == 0)
     {
         msg_Err(gl, "could not find appropriate pixel buffer PixelFormat");
         wglMakeCurrent(NULL, NULL);
@@ -418,7 +450,8 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
         goto error2;
     }
     wglMakeCurrent(NULL, NULL);
-    wglMakeCurrent(sys->pixelBufferDC, sys->hGLRC);
+    if (!wglMakeCurrent(sys->pixelBufferDC, sys->hGLRC))
+        goto error2;
 
     int ret = vlc_gl_api_Init(&sys->api, gl);
     if (ret != VLC_SUCCESS)
@@ -429,21 +462,36 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
     }
 
     const opengl_vtable_t *vt = &sys->api.vt;
+    if (!offscreen_CanRead(vt, default_framebuffer))
+        goto error2;
+    if (default_framebuffer)
+    {
+        sys->read_buffer = vlc_gl_GetProcAddress(gl, "glReadBuffer");
+        if (sys->read_buffer == NULL)
+            goto error2;
+        vt->GetIntegerv(GL_READ_BUFFER, &sys->default_read_buffer);
+    }
     vt->GenBuffers(BUFFER_COUNT, sys->pixelbuffers);
-    vt->GenFramebuffers(BUFFER_COUNT, sys->framebuffers);
-    vt->GenTextures(BUFFER_COUNT, sys->textures);
+    if (!default_framebuffer)
+    {
+        vt->GenFramebuffers(BUFFER_COUNT, sys->framebuffers);
+        vt->GenTextures(BUFFER_COUNT, sys->textures);
+    }
 
     for (size_t i=0; i<BUFFER_COUNT; ++i)
     {
         vt->BindBuffer(GL_PIXEL_PACK_BUFFER, sys->pixelbuffers[i]);
-        vt->BufferData(GL_PIXEL_PACK_BUFFER, width*height*4, NULL,
+        vt->BufferData(GL_PIXEL_PACK_BUFFER, (size_t)width*height*4, NULL,
                        GL_STREAM_READ);
-        vt->BindFramebuffer(GL_FRAMEBUFFER, sys->framebuffers[i]);
-        vt->BindTexture(GL_TEXTURE_2D, sys->textures[i]);
-        vt->TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
-                       GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-        vt->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                 GL_TEXTURE_2D, sys->textures[i], 0);
+        if (!default_framebuffer)
+        {
+            vt->BindFramebuffer(GL_FRAMEBUFFER, sys->framebuffers[i]);
+            vt->BindTexture(GL_TEXTURE_2D, sys->textures[i]);
+            vt->TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                           GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+            vt->FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                     GL_TEXTURE_2D, sys->textures[i], 0);
+        }
 
         struct pbo_picture_context *context = &sys->picture_contexts[i];
         context->buffer_mapping = NULL;
@@ -451,32 +499,55 @@ static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
         context->cond = &sys->cond;
         context->context.destroy = picture_context_destroy;
         context->context.copy = picture_context_copy;
+        context->context.vctx = NULL;
         context->rc = 0;
     }
 
     sys->current_flip = BUFFER_COUNT - 1;
-    BindDrawFramebuffer(sys);
+    if (default_framebuffer)
+        vt->BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    else
+        BindDrawFramebuffer(sys);
+    if (vt->GetError() != GL_NO_ERROR)
+        goto error2;
     wglMakeCurrent(NULL, NULL);
 
     wglDeleteContext(tmpGLRC);
-    ReleaseDC(NULL, tmpScreenDC);
+    ReleaseDC(tmpWindow, tmpScreenDC);
+    DestroyWindow(tmpWindow);
 
     return VLC_SUCCESS;
 
 error2:
+    wglMakeCurrent(NULL, NULL);
+    if (sys->hGLRC != NULL)
+        wglDeleteContext(sys->hGLRC);
     if (sys->pixelBufferDC != NULL)
         sys->wgl_vt.ReleasePbufferDCARB(sys->hbuffer, sys->pixelBufferDC);
     if (sys->hbuffer != NULL)
         sys->wgl_vt.DestroyPbufferARB(sys->hbuffer);
-    wglDeleteContext(sys->hGLRC);
 error1:
     if (tmpGLRC)
         wglDeleteContext(tmpGLRC);
     if (tmpScreenDC)
-        ReleaseDC(NULL, tmpScreenDC);
+        ReleaseDC(tmpWindow, tmpScreenDC);
+    if (tmpWindow)
+        DestroyWindow(tmpWindow);
     vlc_obj_free(&gl->obj, sys);
 
     return VLC_EGENERIC;
+}
+
+static int Open(vlc_gl_t *gl, unsigned width, unsigned height,
+                const struct vlc_gl_cfg *gl_cfg)
+{
+    return OpenCommon(gl, width, height, gl_cfg, false);
+}
+
+static int OpenDefault(vlc_gl_t *gl, unsigned width, unsigned height,
+                       const struct vlc_gl_cfg *gl_cfg)
+{
+    return OpenCommon(gl, width, height, gl_cfg, true);
 }
 
 vlc_module_begin()
@@ -484,4 +555,6 @@ vlc_module_begin()
     set_shortname( N_("opengl_offscreen") )
     set_description( N_("offscreen opengl provider for Windows") )
     set_callback_opengl_offscreen( Open, 1 )
+    add_submodule()
+    set_callback_opengl_offscreen_default( OpenDefault, 1 )
 vlc_module_end()

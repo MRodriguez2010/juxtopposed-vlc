@@ -25,8 +25,65 @@
 #include <assert.h>
 #include <vlc_common.h>
 #include <vlc_modules.h>
+#include <vlc_threads.h>
 
 #include "egl_display.h"
+
+struct display_reference
+{
+    EGLDisplay display;
+    unsigned refs;
+    bool skip_terminate;
+    struct display_reference *next;
+};
+
+static vlc_mutex_t displays_lock = VLC_STATIC_MUTEX;
+static struct display_reference *displays;
+
+/* EGL initialization is not generally reference-counted. Keep a shared display
+ * initialized until its last offscreen context releases it. */
+static bool HoldDisplay(EGLDisplay display, bool skip_terminate)
+{
+    vlc_mutex_lock(&displays_lock);
+    for (struct display_reference *ref = displays; ref; ref = ref->next)
+        if (ref->display == display)
+        {
+            ref->refs++;
+            ref->skip_terminate |= skip_terminate;
+            vlc_mutex_unlock(&displays_lock);
+            return true;
+        }
+
+    struct display_reference *ref = malloc(sizeof(*ref));
+    if (ref == NULL || eglInitialize(display, NULL, NULL) != EGL_TRUE)
+    {
+        free(ref);
+        vlc_mutex_unlock(&displays_lock);
+        return false;
+    }
+    *ref = (struct display_reference){display, 1, skip_terminate, displays};
+    displays = ref;
+    vlc_mutex_unlock(&displays_lock);
+    return true;
+}
+
+static void ReleaseDisplay(EGLDisplay display)
+{
+    vlc_mutex_lock(&displays_lock);
+    struct display_reference **entry = &displays;
+    while (*entry && (*entry)->display != display)
+        entry = &(*entry)->next;
+    assert(*entry != NULL);
+    struct display_reference *ref = *entry;
+    if (--ref->refs == 0)
+    {
+        *entry = ref->next;
+        if (!ref->skip_terminate)
+            eglTerminate(display);
+        free(ref);
+    }
+    vlc_mutex_unlock(&displays_lock);
+}
 
 struct vlc_egl_display *
 vlc_egl_display_New(vlc_object_t *parent, const char *name)
@@ -38,6 +95,7 @@ vlc_egl_display_New(vlc_object_t *parent, const char *name)
 
     display->ops = NULL;
     display->display = EGL_NO_DISPLAY;
+    display->skip_terminate = false;
 
     if (!name || !*name)
         name = "any";
@@ -51,8 +109,16 @@ vlc_egl_display_New(vlc_object_t *parent, const char *name)
         if (open && open(display) == VLC_SUCCESS)
         {
             assert(display->display != EGL_NO_DISPLAY);
-            free(mods);
-            return display;
+            if (HoldDisplay(display->display, display->skip_terminate))
+            {
+                free(mods);
+                return display;
+            }
+            if (display->ops && display->ops->close)
+                display->ops->close(display);
+            display->ops = NULL;
+            display->display = EGL_NO_DISPLAY;
+            display->skip_terminate = false;
         }
     }
 
@@ -63,6 +129,7 @@ vlc_egl_display_New(vlc_object_t *parent, const char *name)
 
 void vlc_egl_display_Delete(struct vlc_egl_display *display)
 {
+    ReleaseDisplay(display->display);
     if (display->ops && display->ops->close) {
         display->ops->close(display);
     }

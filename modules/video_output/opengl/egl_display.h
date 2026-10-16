@@ -25,8 +25,8 @@
 #include <EGL/egl.h>
 
 /**
- * Structure for module "egl display", to open an EGL display guaranteed to
- * be internally refcounted.
+ * Structure for module "egl display". The wrapper initializes the display and
+ * keeps it initialized until its last reference is released.
  */
 struct vlc_egl_display
 {
@@ -36,6 +36,8 @@ struct vlc_egl_display
 
     const struct vlc_egl_display_ops *ops;
     void *sys;
+    /* An untracked default display can also belong to other components. */
+    bool skip_terminate;
 };
 
 struct vlc_egl_display_ops {

@@ -156,7 +156,7 @@ vout_PLUGINS += libegl_display_gbm_plugin.la
 endif
 endif
 
-libegl_pbuffer_filter_plugin_la_SOURCES = video_filter/egl_pbuffer.c \
+libegl_pbuffer_filter_plugin_la_SOURCES = video_filter/egl_pbuffer.c video_filter/offscreen_readback.h \
     video_output/opengl/egl_display.c video_output/opengl/egl_display.h
 libegl_pbuffer_filter_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) $(EGL_FLAGS)
 libegl_pbuffer_filter_plugin_la_LIBADD = $(EGL_LIBS)
@@ -182,7 +182,7 @@ vout_PLUGINS += libegl_surfacetexture_plugin.la
 endif
 endif
 
-libopengl_win_offscreen_plugin_la_SOURCES = video_filter/opengl_win_offscreen.c
+libopengl_win_offscreen_plugin_la_SOURCES = video_filter/opengl_win_offscreen.c video_filter/offscreen_readback.h
 if HAVE_WIN32
 if HAVE_GL
 libopengl_win_offscreen_plugin_la_CFLAGS = $(AM_CFLAGS) $(OPENGL_COMMONCFLAGS) $(GL_CFLAGS)
