@@ -997,7 +997,9 @@ QVariantMap RedesignPreferences::describe(const QString& name) const
 
     const QByteArray bytes = name.toUtf8();
     const auto* cfg = config_FindConfig(bytes.constData());
-    if (!cfg || !CONFIG_ITEM(cfg->i_type)) return {};
+    // Removed compatibility options have no UI text. Use the same rule as
+    // the native catalog, so curated sections do not expose dead controls.
+    if (!cfg || !CONFIG_ITEM(cfg->i_type) || !cfg->psz_text) return {};
     QVariantMap result{{QStringLiteral("name"), name}, {QStringLiteral("title"), qtr(cfg->psz_text ? cfg->psz_text : cfg->psz_name)},
         {QStringLiteral("help"), qtr(cfg->psz_longtext ? cfg->psz_longtext : "")}, {QStringLiteral("value"), value(name)}};
     if (name == QLatin1String("pitch-shift"))
