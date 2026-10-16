@@ -2356,7 +2356,7 @@ int vout_ChangeVisualizationFormat(vout_thread_t *vout, const video_format_t *fm
     vout_control_Hold(&sys->control);
     vlc_mutex_lock(&sys->window_lock);
     vlc_queuedmutex_lock(&sys->display_lock);
-    int ret = vout_SetDisplayFormat(sys->display, &original, NULL);
+    int ret = vout_ResizeDisplay(sys->display, &original);
     if (ret == VLC_SUCCESS)
     {
         video_format_Clean(&sys->original);

@@ -109,6 +109,7 @@ int vout_ChangeSource( vout_thread_t *p_vout, const video_format_t *fmt,
 /* Update a software visualization canvas without replacing its display.
  * The producer must serialize this with picture submission and shutdown. */
 int vout_ChangeVisualizationFormat(vout_thread_t *, const video_format_t *);
+int vout_ResizeDisplay(vout_display_t *, const video_format_t *);
 
 enum vout_crop_mode {
     VOUT_CROP_NONE, VOUT_CROP_RATIO, VOUT_CROP_WINDOW, VOUT_CROP_BORDER,

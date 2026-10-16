@@ -24,7 +24,7 @@ static atomic_uint_fast64_t picture_size;
 static atomic_uint picture_count, window_opens, window_closes, failed_formats;
 static atomic_uint display_opens, display_closes, display_updates;
 static atomic_bool fail_format;
-static bool test_scope, test_meter;
+static bool test_scope, test_meter, test_converted;
 static vlc_sem_t frame_event;
 
 static uint64_t size_key(unsigned width, unsigned height)
@@ -64,6 +64,9 @@ static void Display(vout_display_t *vd, picture_t *picture)
 {
     assert(vd->fmt->i_visible_width == picture->format.i_visible_width);
     assert(vd->fmt->i_visible_height == picture->format.i_visible_height);
+    assert(vd->fmt->i_chroma == picture->format.i_chroma);
+    if (test_converted)
+        assert(picture->format.i_chroma == VLC_CODEC_BGRX);
     if (test_meter && atomic_load(&picture_size)
                       != size_key(picture->format.i_visible_width,
                                   picture->format.i_visible_height))
@@ -118,6 +121,8 @@ static int UpdateDisplay(vout_display_t *vd, const video_format_t *fmt,
                          vlc_video_context *vctx)
 {
     (void)vd; (void)vctx;
+    if (test_converted && fmt->i_chroma != VLC_CODEC_BGRX)
+        return VLC_EGENERIC;
     if (fmt->i_visible_width == 1200 && atomic_load(&fail_format))
     {
         atomic_fetch_add(&failed_formats, 1);
@@ -147,6 +152,8 @@ static int OpenDisplay(vout_display_t *vd, video_format_t *fmt,
         return VLC_EGENERIC;
     }
     atomic_fetch_add(&display_opens, 1);
+    if (test_converted)
+        fmt->i_chroma = VLC_CODEC_BGRX;
     static const struct vlc_display_operations ops = {
         .display = Display, .close = CloseDisplay, .update_format = UpdateDisplay,
     };
@@ -193,10 +200,11 @@ static void resize(libvlc_int_t *root, int64_t width, int64_t height,
     assert(atomic_load(&window_closes) == 0);
 }
 
-static void test_resize(const char *effect)
+static void test_resize(const char *effect, bool converted)
 {
     const bool goom = !strcmp(effect, "goom");
-    test_scope = !strcmp(effect, "scope");
+    test_converted = converted;
+    test_scope = !converted && !strcmp(effect, "scope");
     test_meter = !strcmp(effect, "vuMeter");
     atomic_store(&picture_size, 0);
     atomic_store(&picture_count, 0);
@@ -271,12 +279,15 @@ static void test_resize(const char *effect)
     var_SetInteger(root, "goom-width", 1200);
     var_SetInteger(root, "goom-height", 600);
     const vlc_tick_t deadline = vlc_tick_now() + VLC_TICK_FROM_SEC(5);
-    while (atomic_load(&failed_formats) == 0)
+    /* Wait for both the live update and fallback display open to reject the
+     * format before allowing it again. A retained old-size picture alone does
+     * not prove that the fallback has finished. */
+    while (atomic_load(&failed_formats) < 2)
     {
         assert(vlc_sem_timedwait(&frame_event, deadline) == 0);
     }
     previous = atomic_load(&picture_count);
-    wait_picture(800, 500, previous);
+    wait_picture(800, 500, previous + 1);
     atomic_store(&fail_format, false);
     resize(root, 960, 540, 960, 540);
 
@@ -331,13 +342,15 @@ int main(void)
     const char *effects[] = { "scope", "spectrum", "spectrometer", "vuMeter", "dummy" };
     for (size_t i = 0; i < ARRAY_SIZE(effects); ++i)
     {
-        test_resize(effects[i]);
+        test_resize(effects[i], false);
         fprintf(stderr, "%s: live resize and recovery passed\n", effects[i]);
     }
 #ifdef VISUAL_RESIZE_TEST_GOOM
-    test_resize("goom");
+    test_resize("goom", false);
     fprintf(stderr, "goom: live resize and recovery passed\n");
 #endif
+    test_resize("scope", true);
+    fprintf(stderr, "scope: converted display resize and recovery passed\n");
     vlc_timer_destroy(timer);
     return 0;
 }

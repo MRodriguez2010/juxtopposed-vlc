@@ -756,13 +756,14 @@ void vout_SetDisplayIccProfile(vout_display_t *vd,
         vd->ops->set_icc_profile(vd, profile);
 }
 
-int vout_SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
-                          vlc_video_context *vctx)
+static int SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
+                            const video_format_t *display_fmt,
+                            vlc_video_context *vctx)
 {
     if (!vd->ops->update_format)
         return VLC_EGENERIC;
 
-    int ret = vd->ops->update_format(vd, fmt, vctx);
+    int ret = vd->ops->update_format(vd, display_fmt, vctx);
     if (ret != VLC_SUCCESS)
         return ret;
 
@@ -773,7 +774,7 @@ int vout_SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
     video_format_Clean(&osys->source);
     osys->source = *fmt;
     video_format_Clean(&osys->display_fmt);
-    video_format_Copy(&osys->display_fmt, fmt);
+    video_format_Copy(&osys->display_fmt, display_fmt);
     video_format_Clean(&osys->decoder_source);
     video_format_Copy(&osys->decoder_source, fmt);
     if (vctx)
@@ -791,13 +792,15 @@ int vout_SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
             return source_ret;
     }
 
-    /* On update_format success, the vout display accepts the target format, so
-     * no display converters are needed. */
+    /* Replace any converter that still uses the previous dimensions. */
     if (osys->converter != NULL)
     {
         VoutConverterRelease(osys->converter);
         osys->converter = NULL;
     }
+    ret = VoutConverterCreate(vd);
+    if (ret != VLC_SUCCESS)
+        return ret;
 
     bool place_changed = PlaceVideoInDisplay(osys);
     if (place_changed && vd->ops->video_place_changed != NULL)
@@ -811,6 +814,21 @@ int vout_SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
     }
 
     return VLC_SUCCESS;
+}
+
+int vout_SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
+                          vlc_video_context *vctx)
+{
+    return SetDisplayFormat(vd, fmt, fmt, vctx);
+}
+
+int vout_ResizeDisplay(vout_display_t *vd, const video_format_t *fmt)
+{
+    /* Keep the negotiated display chroma when the software source needs a
+     * converter, for example Goom's XRGB output on Direct3D11. */
+    video_format_t display_fmt = *fmt;
+    display_fmt.i_chroma = vd->fmt->i_chroma;
+    return SetDisplayFormat(vd, fmt, &display_fmt, NULL);
 }
 
 int vout_display_SetFormat(vout_display_t *vd, const video_format_t *fmt,
