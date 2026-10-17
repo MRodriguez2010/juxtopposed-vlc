@@ -10,7 +10,6 @@ Item {
     property real blurRadius: 25 * scaleFactor
     property real cornerRadius: 10 * scaleFactor
     property bool menuShadow: false
-    // Separate settings windows have Qt content but no native video surface.
     property bool nativeVideo: true
     Widgets.RoundedRectangleShadow {
         anchors.alignWhenCentered: false

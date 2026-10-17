@@ -46,7 +46,7 @@ Item {
     Accessible.name: qsTr("Main interface")
     AccessibleCompat.id: "mainInterface"
 
-    RedesignPreferencesWindow { }
+    RedesignPreferencesWindow { parent: g_mainInterface; videoBackdropContent: dialogBackdrop }
     RedesignOnboardingWindow { }
 
     Component {

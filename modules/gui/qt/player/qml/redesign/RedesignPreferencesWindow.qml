@@ -8,19 +8,11 @@ import VLC.Style
 import VLC.Dialogs
 import VLC.Player
 
-Window {
+RedesignSettingsDialog {
     id: root
-    title: qsTr("Settings — VLC Media Player")
-    width: Math.min(theme.dp(1078), Screen.desktopAvailableWidth - theme.dp(40))
-    height: Math.min(theme.dp(895), Screen.desktopAvailableHeight - theme.dp(60))
-    minimumWidth: theme.dp(640); minimumHeight: theme.dp(440)
-    flags: Qt.Dialog | Qt.FramelessWindowHint
-    modality: Qt.ApplicationModal
-    transientParent: MainCtx.intfMainWindow
-    color: "transparent"
-    property real scaleFactor: VLCStyle.scale
-    property color accentColor: MainCtx.redesignAccent
-    property bool lightTheme: !VLCStyle.palette.isDark
+    scaleFactor: VLCStyle.scale
+    accentColor: MainCtx.redesignAccent
+    lightTheme: !VLCStyle.palette.isDark
     property string category: "general"
     readonly property string categoryTitle: specification.pageTitles[category] || ""
     property bool advanced: false
@@ -29,17 +21,12 @@ Window {
     property string actionMessage: ""
     property bool actionMessageIsError: true
     property bool resetFailed: false
-    readonly property RedesignTheme theme: RedesignTheme { scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor }
     RedesignPreferences { id: preferenceStore; ctx: MainCtx; autoSave: true }
     RedesignPreferencesCatalog { id: specification }
-    RedesignWindowBackdrop {
-        id: windowBackdrop
-        backend: MainCtx
-        window: root
-        enabled: MainCtx.backdropBlurEnabled
-        clipRect: Qt.rect(content.x, content.y, content.width, content.height)
-        cornerRadius: theme.dp(14)
-        darkTheme: !root.lightTheme
+    Binding {
+        target: MainCtx; property: "useGlobalShortcuts"; value: false
+        when: root.visible
+        restoreMode: Binding.RestoreBindingOrValue
     }
     RedesignConfirmationDialog {
         id: resetDialog
@@ -61,7 +48,6 @@ Window {
             RedesignSurfaceBackdrop {
                 sourceItem: content
                 scaleFactor: root.scaleFactor
-                nativeVideo: false
             }
         }
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
@@ -72,12 +58,16 @@ Window {
         actionMessage = ""
         resetFailed = false
         searchField.clear()
-        visible = true
-        raise(); requestActivate()
+        if (MainCtx.intfMainWindow.visibility === Window.Minimized) MainCtx.intfMainWindow.showNormal()
+        else MainCtx.intfMainWindow.visible = true
+        MainCtx.intfMainWindow.raise()
+        MainCtx.intfMainWindow.requestActivate()
+        open()
+        content.forceActiveFocus()
     }
     function closeSettings() {
         content.forceActiveFocus()
-        if (!preferenceStore.dirty || preferenceStore.save()) visible = false
+        if (!preferenceStore.dirty || preferenceStore.save()) close()
     }
     function runAction(action) {
         if (action === "redesign-reset-all") { resetDialog.open(); return }
@@ -93,10 +83,10 @@ Window {
             actionMessage = qsTr("VLC saved the default settings. Restart VLC to use all settings.")
         }
     }
-    onClosing: event => { event.accepted = false; closeSettings() }
+    onDismissRequested: root.closeSettings()
     Connections {
         target: DialogsProvider
-        function onShowRedesignPreferences() { if (!root.visible) root.begin(); else { root.raise(); root.requestActivate() } }
+        function onShowRedesignPreferences() { if (!root.visible) root.begin(); else content.forceActiveFocus() }
         function onShowRedesignPreferencesPage(page) {
             if (!specification.pageTitles[page]) return
             root.begin()
@@ -106,17 +96,9 @@ Window {
             scroll.contentItem.contentY = 0
         }
     }
-    Item {
+    contentItem: Item {
         id: content
-        anchors.fill: parent
-        anchors.margins: theme.dp(15)
         focus: true
-        RedesignWindowSurface {
-            objectName: "preferencesWindowSurface"
-            anchors.fill: parent
-            theme: root.theme
-            backdropActive: windowBackdrop.active
-        }
         Rectangle {
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
             height: theme.dp(50); radius: theme.dp(14); color: theme.field
@@ -204,11 +186,6 @@ Window {
             y: theme.dp(16)
             text: root.search.length ? qsTr("Search results") : root.categoryTitle
             color: theme.foreground; font.pixelSize: theme.dp(16)
-        }
-        MouseArea {
-            anchors.left: navigation.right; anchors.right: closeButton.left; anchors.top: parent.top; height: theme.dp(60)
-            z: -1
-            onPressed: root.startSystemMove()
         }
         RedesignButton {
             id: closeButton

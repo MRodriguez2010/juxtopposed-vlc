@@ -1273,8 +1273,7 @@ libqml_module_player_a_QML = \
 	player/qml/redesign/RedesignActionMenu.qml \
 	player/qml/redesign/RedesignSurfaceBackdrop.qml \
 	player/qml/redesign/RedesignDialogSurface.qml \
-	player/qml/redesign/RedesignWindowBackdrop.qml \
-	player/qml/redesign/RedesignWindowSurface.qml \
+	player/qml/redesign/RedesignSettingsDialog.qml \
 	player/qml/redesign/RedesignLibraryArtwork.qml \
 	player/qml/redesign/RedesignLibraryView.qml \
 	player/qml/redesign/RedesignBreadcrumbs.qml \
@@ -2209,14 +2208,14 @@ EXTRA_DIST += tests/tst_RedesignTheme.qml
 EXTRA_DIST += tests/tst_RedesignSliders.qml
 EXTRA_DIST += tests/tst_RedesignActionMenu.qml
 EXTRA_DIST += tests/tst_RedesignDialogSurfaces.qml
-EXTRA_DIST += tests/tst_RedesignWindowBackdrop.qml
+EXTRA_DIST += tests/tst_RedesignSettingsDialog.qml
 EXTRA_DIST += tests/tst_RedesignAppearance.qml
 EXTRA_DIST += tests/test_stereo_test_signal.cpp
 TESTS += tests/tst_RedesignTheme.qml
 TESTS += tests/tst_RedesignSliders.qml
 TESTS += tests/tst_RedesignActionMenu.qml
 TESTS += tests/tst_RedesignDialogSurfaces.qml
-TESTS += tests/tst_RedesignWindowBackdrop.qml
+TESTS += tests/tst_RedesignSettingsDialog.qml
 TESTS += tests/tst_RedesignAppearance.qml
 EXTRA_DIST += tests/tst_RedesignQueue.qml
 EXTRA_DIST += tests/tst_RedesignBookmarks.qml

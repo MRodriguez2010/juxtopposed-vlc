@@ -371,7 +371,6 @@ public:
     Q_INVOKABLE virtual bool platformHandlesResizeWithCSD() const { return false; };
     Q_INVOKABLE virtual bool platformHandlesTitleBarButtonsWithCSD() const { return false; };
     Q_INVOKABLE virtual bool platformHandlesShadowsWithCSD() const { return false; };
-    Q_INVOKABLE virtual bool setWindowBackdrop(QWindow*, bool, const QRectF&, qreal, bool) { return false; }
 
     void setUsingTouch(bool touch)
     {
