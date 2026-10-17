@@ -98,8 +98,8 @@ ColumnLayout {
                                 width: root.theme.dp(14); height: slider.availableHeight
                                 radius: root.theme.dp(5); color: root.theme.field
                                 Rectangle {
-                                    anchors.bottom: parent.bottom
-                                    width: parent.width; height: slider.position * parent.height
+                                    y: Math.min(slider.visualPosition, 0.5) * parent.height
+                                    width: parent.width; height: Math.abs(slider.visualPosition - 0.5) * parent.height
                                     radius: parent.radius; color: root.theme.progress
                                     border.width: 1; border.color: root.theme.field
                                 }

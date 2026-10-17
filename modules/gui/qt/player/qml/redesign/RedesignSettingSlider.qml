@@ -21,7 +21,7 @@ ColumnLayout {
     property real inputTo: to
     property real stepSize: 0.1
     property real resetValue: 1
-    property real fillOrigin: from
+    property real fillOrigin: Math.min(from, to) < 0 && Math.max(from, to) > 0 ? 0 : from
     property string minimumValueText
     property bool trimTrailingZeros: false
     property var ticks: []

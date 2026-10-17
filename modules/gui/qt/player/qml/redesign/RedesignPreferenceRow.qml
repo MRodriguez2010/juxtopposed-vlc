@@ -353,7 +353,16 @@ ColumnLayout {
                 background: Rectangle {
                     x: slider.leftPadding; y: (slider.height - height) / 2
                     width: slider.availableWidth; height: theme.dp(14); radius: theme.dp(5); color: theme.field
-                    Rectangle { width: slider.visualPosition * parent.width; height: parent.height; radius: parent.radius; color: theme.progress }
+                    Rectangle {
+                        readonly property real origin: {
+                            const crossesZero = Math.min(slider.from, slider.to) < 0 && Math.max(slider.from, slider.to) > 0
+                            const position = crossesZero ? -slider.from / (slider.to - slider.from) : 0
+                            return slider.mirrored ? 1 - position : position
+                        }
+                        x: Math.min(slider.visualPosition, origin) * parent.width
+                        width: Math.abs(slider.visualPosition - origin) * parent.width
+                        height: parent.height; radius: parent.radius; color: theme.progress
+                    }
                 }
                 handle: Rectangle {
                     x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
