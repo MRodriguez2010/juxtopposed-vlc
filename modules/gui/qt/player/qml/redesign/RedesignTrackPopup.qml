@@ -5,6 +5,7 @@ import QtQuick.Controls.Basic as C
 
 C.Popup {
     id: root
+    property Component videoBackdropContent
     // The device list is read once upstream; re-read it so hotplugged outputs show up.
     onAboutToShow: if (root.audioDevices) root.audioDevices.refresh()
     // Cheap: copies the list PipeWire already keeps; refresh() is a no-op when unchanged.
@@ -40,7 +41,15 @@ C.Popup {
     bottomMargin: theme.dp(74)
     focus: true
     closePolicy: C.Popup.CloseOnEscape | C.Popup.CloseOnPressOutsideParent
-    background: Rectangle { color: theme.floatingPanel; radius: theme.dp(10) }
+    background: Rectangle {
+        color: theme.floatingPanel; radius: theme.dp(10)
+        Loader {
+            anchors.fill: parent
+            z: -1
+            active: root.visible
+            sourceComponent: root.videoBackdropContent
+        }
+    }
     function toggleFrom(anchor, requestedPage) {
         if (visible && page === requestedPage) { close(); return }
         page = requestedPage

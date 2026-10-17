@@ -43,6 +43,24 @@ TestCase {
         tryCompare(testCase, "activeBackdrops", 0)
     }
 
+    function test_trackBackdropFollowsPopupLifetime() {
+        trackPicker.videoBackdropContent = backdropProbe
+        trackPicker.page = "audio"
+        const video = findChild(player, "redesignViewport")
+        const original = video.mapToItem(player, 0, 0)
+        trackPicker.open()
+        tryCompare(testCase, "activeBackdrops", 1)
+        const backdrop = findChild(trackPicker.background, "backdropProbe")
+        verify(backdrop !== null)
+        compare(backdrop.width, trackPicker.background.width)
+        compare(backdrop.height, trackPicker.background.height)
+        compare(video.mapToItem(player, 0, 0), original)
+        trackPicker.page = "subtitles"
+        tryCompare(testCase, "activeBackdrops", 1)
+        trackPicker.close()
+        tryCompare(testCase, "activeBackdrops", 0)
+    }
+
     RedesignPlayerView {
         id: player
         anchors.fill: parent
@@ -177,6 +195,7 @@ TestCase {
         player.queueOpen = false
         player.settingsPage = ""
         player.videoBackdropContent = null
+        trackPicker.videoBackdropContent = null
         player.playing = false
         player.muted = false
         player.fullscreen = false

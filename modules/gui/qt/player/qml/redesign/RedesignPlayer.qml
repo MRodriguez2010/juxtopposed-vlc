@@ -303,6 +303,7 @@ FocusScope {
 
     RedesignTrackPopup {
         id: tracksPopup
+        videoBackdropContent: view.videoBackdropContent
         parent: view
         placementArea: view
         scaleFactor: view.scaleFactor; lightTheme: view.lightTheme; accentColor: view.accentColor
