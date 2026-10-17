@@ -29,7 +29,9 @@ T.Button {
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
     Accessible.name: text
-    Accessible.role: Accessible.Button
+    Accessible.role: root.checkable ? Accessible.CheckBox : Accessible.Button
+    Accessible.onPressAction: root.click()
+    Accessible.onToggleAction: if (root.checkable) root.click()
     RedesignToolTip {
         theme: root.theme
         text: root.text

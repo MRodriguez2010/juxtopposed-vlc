@@ -389,6 +389,29 @@ TestCase {
         compare(actionSpy.signalArguments[0][0], "folderAction")
         compare(store.revision, revision)
     }
+    function test_accessibleSwitchUpdatesTheSetting() {
+        const button = findChild(seekRow, "preferenceToggleEditor")
+        compare(button.Accessible.role, Accessible.CheckBox)
+        compare(button.checked, true); compare(store.value("fastSeek"), false)
+        button.Accessible.toggleAction()
+        compare(button.checked, false); compare(store.value("fastSeek"), true)
+        button.Accessible.pressAction()
+        compare(button.checked, true); compare(store.value("fastSeek"), false)
+        button.enabled = false
+        button.Accessible.toggleAction()
+        compare(store.value("fastSeek"), false)
+        button.enabled = true
+    }
+    function test_accessibleActionRunsOnceWithoutChangingSettings() {
+        actionRow.visible = true
+        const button = findChild(actionRow, "preferenceActionButton")
+        compare(button.Accessible.role, Accessible.Button)
+        const revision = store.revision
+        button.Accessible.pressAction()
+        compare(actionSpy.count, 1)
+        compare(actionSpy.signalArguments[0][0], "folderAction")
+        compare(store.revision, revision)
+    }
     function test_spatialModeRetainsChoiceWhileDisabled() {
         spatialModeRow.visible = true
         const choice = findChild(spatialModeRow, "preferenceChoiceEditor")
