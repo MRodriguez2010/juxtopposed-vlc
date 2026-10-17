@@ -44,6 +44,23 @@ TestCase {
         tryCompare(testCase, "activeBackdrops", 0)
     }
 
+    function test_backdropSourceContainsChromeAndExcludesPanels() {
+        function contains(item) {
+            for (let parent = item; parent; parent = parent.parent)
+                if (parent === player.backdropSource) return true
+            return false
+        }
+        verify(contains(findChild(player, "redesignViewport")))
+        verify(contains(findChild(player, "redesignLibraryPanel")))
+        verify(contains(findChild(player, "redesignMiniPlayer")))
+        verify(contains(findChild(player, "redesignHeader")))
+        verify(contains(findChild(player, "redesignToolbar")))
+        verify(!contains(findChild(player, "redesignRightPanel")))
+        trackPicker.open()
+        verify(!contains(trackPicker.background))
+        trackPicker.close()
+    }
+
     function test_trackBackdropFollowsPopupLifetime() {
         trackPicker.videoBackdropContent = backdropProbe
         trackPicker.page = "audio"
@@ -930,7 +947,7 @@ TestCase {
         compare(player.libraryOpen, false)
         compare(player.libraryExpanded, false)
         compare(player.videoItem, video)
-        compare(findChild(player, "redesignViewport").parent, player)
+        compare(findChild(player, "redesignViewport").parent, player.backdropSource)
         // Reparenting the surface must leave the compact library above video.
         player.libraryOpen = true
         wait(220)

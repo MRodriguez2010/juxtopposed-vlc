@@ -136,11 +136,23 @@ FocusScope {
         timeForPosition: value => rootPlayer.clockText(Player.length.scale(value))
         seekPreviewImage: Player.seekPreview
         videoBackdropContent: Component {
-            VideoBackdrop {
-                videoSurfaceProvider: MainCtx.videoSurfaceProvider
+            Item {
+                id: surfaceBackdrop
+                property real blurRadius: 25 * view.scaleFactor
+                property real cornerRadius: 10 * view.scaleFactor
                 visible: MainCtx.backdropBlurRequested()
-                blurRadius: 25 * view.scaleFactor
-                cornerRadius: 10 * view.scaleFactor
+                VideoBackdrop {
+                    anchors.fill: parent
+                    videoSurfaceProvider: MainCtx.videoSurfaceProvider
+                    blurRadius: surfaceBackdrop.blurRadius
+                    cornerRadius: surfaceBackdrop.cornerRadius
+                }
+                Widgets.BackdropBlur {
+                    anchors.fill: parent
+                    sourceItem: view.backdropSource
+                    radius: surfaceBackdrop.blurRadius
+                    cornerRadius: surfaceBackdrop.cornerRadius
+                }
             }
         }
         seekThumbnailContent: Component {

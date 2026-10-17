@@ -1511,6 +1511,7 @@ libqml_module_widgets_a_QML = \
 	widgets/qml/RoundedRectangleShadow.qml \
 	widgets/qml/VoronoiSnow.qml \
 	widgets/qml/DualKawaseBlur.qml \
+	widgets/qml/BackdropBlur.qml \
 	widgets/qml/CheckBoxExt.qml \
 	widgets/qml/ProgressBarExt.qml
 libqml_module_widgets_a_Singleton_QML =
@@ -1909,6 +1910,21 @@ test_dcomp_backdrop_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
 check_PROGRAMS += test_dcomp_backdrop
 TESTS += test_dcomp_backdrop
 endif
+
+test_backdrop_blur_SOURCES = tests/test_backdrop_blur.cpp util/textureproviderobserver.cpp util/textureproviderobserver.hpp widgets/native/viewblockingrectangle.cpp widgets/native/viewblockingrectangle.hpp
+nodist_test_backdrop_blur_SOURCES = tests/test_backdrop_blur.moc util/textureproviderobserver.moc.cpp widgets/native/viewblockingrectangle.moc.cpp shaders/shaders.cpp
+BUILT_SOURCES += tests/test_backdrop_blur.moc
+CLEANFILES += tests/test_backdrop_blur.moc
+test_backdrop_blur_CPPFLAGS = $(QT_QTEST_COMMON_cppflags) -DTOP_SRCDIR=\"$(abs_top_srcdir)\"
+test_backdrop_blur_CXXFLAGS = $(QT_QTEST_COMMON_cxxflags)
+test_backdrop_blur_LDADD = $(QT_QTEST_COMMON_ldadd)
+if HAVE_LIBATOMIC
+test_backdrop_blur_CXXFLAGS += -DQT_HAS_LIBATOMIC
+test_backdrop_blur_LDADD += -latomic
+endif
+test_backdrop_blur_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
+check_PROGRAMS += test_backdrop_blur
+TESTS += test_backdrop_blur
 
 test_video_backdrop_SOURCES = tests/test_video_backdrop.cpp maininterface/videobackdrop.cpp maininterface/videobackdrop.hpp
 nodist_test_video_backdrop_SOURCES = tests/test_video_backdrop.moc maininterface/videobackdrop.moc.cpp

@@ -1056,6 +1056,7 @@ qml_modules += {
         'widgets/qml/RoundedRectangleShadow.qml',
         'widgets/qml/VoronoiSnow.qml',
         'widgets/qml/DualKawaseBlur.qml',
+        'widgets/qml/BackdropBlur.qml',
         'widgets/qml/CheckBoxExt.qml',
         'widgets/qml/ProgressBarExt.qml',
     ),
@@ -1461,6 +1462,15 @@ if qt6_dep.found()
                                  cc.find_library('d3d11'), cc.find_library('dcomp'), cc.find_library('dxguid')],
             }
         endif
+        vlc_tests += {
+            'name': 'test_qt_backdrop_blur',
+            'sources': [files('tests/test_backdrop_blur.cpp', 'util/textureproviderobserver.cpp', 'widgets/native/viewblockingrectangle.cpp'), shaders_processed, shader_targets],
+            'moc_sources': files('tests/test_backdrop_blur.cpp'),
+            'moc_headers': files('util/textureproviderobserver.hpp', 'widgets/native/viewblockingrectangle.hpp'),
+            'suite': ['qt'],
+            'include_directories': qt_include_dir,
+            'dependencies': [qt6_dep, qt_extra_deps, qtest_qt6_dep],
+        }
         vlc_tests += {
             'name': 'test_qt_video_backdrop',
             'sources': files('tests/test_video_backdrop.cpp', 'maininterface/videobackdrop.cpp'),

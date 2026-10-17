@@ -55,6 +55,9 @@ Item {
     // The following property must be set in order to make other properties respected:
     property bool postprocess: false
 
+    // Rounded clipping of the final quad; requires postprocess.
+    property real cornerRadius: 0.0
+
     property color tint: "transparent"
     property real tintStrength: 0.0
     property real noiseStrength: 0.0
@@ -645,6 +648,9 @@ Item {
         property alias noiseStrength: root.noiseStrength
         property alias exclusionStrength: root.exclusionStrength
         property alias backgroundColor: root.backgroundColor
+
+        readonly property size size: Qt.size(width, height)
+        property alias cornerRadius: root.cornerRadius
 
         fragmentShader: root.postprocess ? "qrc:///shaders/DualKawaseBlur_upsample_postprocess.frag.qsb"
                                          : "qrc:///shaders/DualKawaseBlur_upsample.frag.qsb"

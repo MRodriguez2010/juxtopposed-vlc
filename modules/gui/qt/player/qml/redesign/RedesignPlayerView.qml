@@ -74,6 +74,7 @@ FocusScope {
     property Component titleBarDragContent
     property Component videoContent
     property Component videoBackdropContent
+    readonly property alias backdropSource: backdropScene
     property Component libraryContent
     property Component queueContent
     property Component settingsContent
@@ -164,13 +165,17 @@ FocusScope {
     }
     Timer { id: revealTimer; interval: root.controlsHideTimeout; running: root.fullscreen }
     onFullscreenChanged: revealControls()
-    Rectangle { anchors.fill: parent; color: theme.background }
+    Item {
+        id: backdropScene
+        anchors.fill: parent
+        Rectangle { anchors.fill: parent; z: -1; color: theme.background }
+    }
 
     // Side panels cover the picture. Their state must not change the video
     // surface geometry or trigger a new video size/aspect ratio.
     Item {
         id: viewport
-        parent: root.libraryExpanded ? miniPlayer.videoArea : root
+        parent: root.libraryExpanded ? miniPlayer.videoArea : backdropScene
         objectName: "redesignViewport"
         visible: !root.libraryExpanded || (root.started && miniPlayer.visible)
         z: 0
@@ -310,6 +315,7 @@ FocusScope {
 
     Rectangle {
         id: library
+        parent: backdropScene
         objectName: "redesignLibraryPanel"
         z: 1
         property real reveal: root.libraryOpen ? 1 : 0
@@ -333,6 +339,7 @@ FocusScope {
     }
     RedesignMiniPlayer {
         id: miniPlayer
+        parent: backdropScene
         objectName: "redesignMiniPlayer"
         z: 2
         visible: root.libraryExpanded && root.libraryOpen && root.started && root.miniPlayerVisible
@@ -419,12 +426,14 @@ FocusScope {
     // must not hide the toolbar and then expose the detector again.
     Item {
         id: headerEdge
+        parent: backdropScene
         z: 4
         anchors.top: parent.top; width: parent.width; height: theme.dp(48)
         HoverHandler { id: headerHover; blocking: false }
     }
     Item {
         id: bottomEdge
+        parent: backdropScene
         z: 4
         anchors.bottom: parent.bottom; width: parent.width; height: theme.dp(64)
         HoverHandler { id: bottomHover; blocking: false }

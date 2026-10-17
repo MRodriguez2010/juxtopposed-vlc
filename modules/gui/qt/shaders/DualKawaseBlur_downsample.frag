@@ -42,6 +42,8 @@ layout(std140, binding = 0) uniform qt_buf {
     float tintStrength;
     float exclusionStrength;
     float noiseStrength;
+    vec2 size;
+    float cornerRadius;
 #endif
 };
 
@@ -124,6 +126,17 @@ void main()
     float r = rand(qt_TexCoord0) - 0.5;
     vec4 noise = vec4(r,r,r,r) * noiseStrength;
     result += noise;
+
+    if (cornerRadius > 0.0) {
+        vec2 localUV = qt_TexCoord0;
+        if (subRect.z > 0.0 && subRect.w > 0.0)
+            localUV = (localUV * vec2(textureSize(source, 0)) - subRect.xy) / subRect.zw;
+        float r = min(cornerRadius, min(size.x, size.y) * 0.5);
+        vec2 q = abs((localUV - 0.5) * size) - size * 0.5 + vec2(r);
+        float distance = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - r;
+        float aa = max(fwidth(distance), 0.0001);
+        result *= 1.0 - smoothstep(-aa * 0.5, aa * 0.5, distance);
+    }
 #endif
 
     fragColor = result * qt_Opacity; // premultiplied alpha
