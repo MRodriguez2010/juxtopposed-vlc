@@ -567,6 +567,7 @@ qt_plugin_sources = files(
     'widgets/native/searchlineedit.cpp',
     'widgets/native/searchlineedit.hpp',
     'widgets/native/viewblockingrectangle.cpp',
+    'util/video_backdrop_region.hpp',
     'widgets/native/viewblockingrectangle.hpp',
     'widgets/native/doubleclickignoringitem.hpp',
 )
@@ -582,6 +583,8 @@ if host_system == 'windows'
         'util/csdmenu_win32.h',
         'util/win32_emutls.cpp',
         'maininterface/compositor_dcomp.cpp',
+        'maininterface/compositor_dcomp_backdrop.cpp',
+        'maininterface/compositor_dcomp_backdrop.hpp',
         'maininterface/compositor_dcomp_acrylicsurface.cpp',
     )
 endif
@@ -1443,6 +1446,17 @@ if qt6_dep.found()
 
     qtest_qt6_dep = dependency('qt6', version: '=' + qt6_dep.version(), modules: ['Test'], required: false)
     if qtest_qt6_dep.found()
+        if host_system == 'windows'
+            vlc_tests += {
+                'name': 'test_qt_dcomp_backdrop',
+                'sources': files('tests/test_dcomp_backdrop.cpp', 'maininterface/compositor_dcomp_backdrop.cpp'),
+                'moc_sources': files('tests/test_dcomp_backdrop.cpp'),
+                'suite': ['qt'],
+                'include_directories': qt_include_dir,
+                'dependencies': [qt6_dep, qt_extra_deps, qtest_qt6_dep,
+                                 cc.find_library('d3d11'), cc.find_library('dcomp'), cc.find_library('dxguid')],
+            }
+        endif
         vlc_tests += {
             'name': 'test_qt_viewblockingrectangle',
             'sources': files('tests/test_viewblockingrectangle.cpp', 'widgets/native/viewblockingrectangle.cpp'),

@@ -43,6 +43,7 @@ static void vlcQtMessageHandler(QtMsgType type, const QMessageLogContext &contex
         || qstrcmp(context.category, "default") == 0
         || qstrcmp(context.category, "qml") == 0
         || qstrcmp(context.category, "js") == 0
+        || qstrncmp(context.category, "vlc.", 4) == 0
         || qstrcmp(context.category, "qt.rhi.general") == 0)
     {
         const char *file = context.file ? context.file : "";

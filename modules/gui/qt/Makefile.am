@@ -391,6 +391,7 @@ libqt_plugin_la_SOURCES = \
 	util/sgmanipulator.cpp \
 	util/sgmanipulator.hpp \
 	util/pointingtooltipattached.hpp \
+	util/video_backdrop_region.hpp \
 	widgets/native/animators.cpp \
 	widgets/native/animators.hpp \
 	widgets/native/customwidgets.cpp widgets/native/customwidgets.hpp \
@@ -616,6 +617,7 @@ nodist_libqt_plugin_la_SOURCES += maininterface/mainctx_win32.moc.cpp \
 libqt_plugin_la_SOURCES += \
 	maininterface/compositor_dcomp.cpp \
 	maininterface/compositor_dcomp.hpp \
+	maininterface/compositor_dcomp_backdrop.cpp maininterface/compositor_dcomp_backdrop.hpp \
 	maininterface/compositor_dcomp_error.hpp \
 	maininterface/compositor_dcomp_acrylicsurface.hpp \
 	maininterface/compositor_dcomp_acrylicsurface.cpp
@@ -1891,6 +1893,19 @@ QT_QTEST_COMMON_cppflags = $(libqt_plugin_la_CPPFLAGS) -I$(builddir)/tests -DTOP
 QT_QTEST_COMMON_cxxflags = $(AM_CXXFLAGS) $(QT_CFLAGS) $(QT_QTEST_CFLAGS) -fPIC $(CXXFLAGS_qt)
 QT_QTEST_COMMON_ldadd = $(QT_LIBS) $(LIBS_qt) $(QT_QTEST_LIBS) $(LIBVLCCORE) $(LIBVLC)
 QT_QTEST_COMMON_ldflags = $(AM_LDFLAGS) $(QT_LDFLAGS) $(QT_QTEST_LDFLAGS)
+
+if HAVE_WIN32
+test_dcomp_backdrop_SOURCES = tests/test_dcomp_backdrop.cpp maininterface/compositor_dcomp_backdrop.cpp maininterface/compositor_dcomp_backdrop.hpp util/video_backdrop_region.hpp
+nodist_test_dcomp_backdrop_SOURCES = tests/test_dcomp_backdrop.moc
+BUILT_SOURCES += tests/test_dcomp_backdrop.moc
+CLEANFILES += tests/test_dcomp_backdrop.moc
+test_dcomp_backdrop_CPPFLAGS = $(QT_QTEST_COMMON_cppflags)
+test_dcomp_backdrop_CXXFLAGS = $(QT_QTEST_COMMON_cxxflags)
+test_dcomp_backdrop_LDADD = $(QT_QTEST_COMMON_ldadd) -ld3d11 -ldcomp -ldxguid
+test_dcomp_backdrop_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
+check_PROGRAMS += test_dcomp_backdrop
+TESTS += test_dcomp_backdrop
+endif
 
 test_viewblockingrectangle_SOURCES = tests/test_viewblockingrectangle.cpp widgets/native/viewblockingrectangle.cpp widgets/native/viewblockingrectangle.hpp
 nodist_test_viewblockingrectangle_SOURCES = tests/test_viewblockingrectangle.moc widgets/native/viewblockingrectangle.moc.cpp
