@@ -29,11 +29,12 @@ C.Menu {
         if (visible) { close(); return }
         buttonAnchor = anchor
         parent = anchor
-        x = Qt.binding(() => root.mirrored ? anchor.width - root.width : 0)
-        y = Qt.binding(() => root.opensBelow ? anchor.height : -root.height)
+        x = Qt.binding(() => root.buttonAnchor && root.mirrored ? root.buttonAnchor.width - root.width : 0)
+        y = Qt.binding(() => root.buttonAnchor ? root.opensBelow ? root.buttonAnchor.height : -root.height : 0)
         open()
     }
     onClosed: buttonAnchor = null
+    onButtonAnchorChanged: if (!buttonAnchor && visible) close()
     popupType: C.Popup.Item
     background: Rectangle {
         id: surface

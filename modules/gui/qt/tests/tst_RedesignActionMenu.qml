@@ -20,6 +20,7 @@ TestCase {
         entries: [{action: "first", label: "First"}, {action: "second", label: "Second"}]
     }
     SignalSpy { id: actions; target: menu; signalName: "actionRequested" }
+    Component { id: temporaryButton; RedesignButton { x: 100; y: 100; text: "Temporary menu" } }
     function init() {
         menu.close()
         tryCompare(menu, "visible", false)
@@ -120,5 +121,20 @@ TestCase {
         testCase.height = 380
         wait(50)
         checkInsideWindow()
+    }
+    function test_destroyedButton_data() {
+        return [{tag: "while-open", closeFirst: false}, {tag: "after-close", closeFirst: true}]
+    }
+    function test_destroyedButton(data) {
+        const anchor = createTemporaryObject(temporaryButton, testCase)
+        menu.toggleFrom(anchor)
+        tryCompare(menu, "opened", true)
+        if (data.closeFirst) { menu.close(); tryCompare(menu, "visible", false) }
+        anchor.destroy()
+        tryCompare(menu, "visible", false)
+        compare(menu.buttonAnchor, null)
+        menu.popup(testCase, Qt.point(100, 120))
+        tryCompare(menu, "opened", true)
+        compare(topLeft().x, 100); compare(topLeft().y, 120)
     }
 }
