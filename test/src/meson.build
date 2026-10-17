@@ -465,6 +465,15 @@ vlc_tests += {
 }
 
 vlc_tests += {
+    'name': 'test_src_video_output_filter_format',
+    'sources': files('video_output/filter_format.c'),
+    'suite': ['src', 'test_src'],
+    'link_with': [libvlc, libvlccore],
+    'module_depends': ['demux_mock', 'rawvideo'],
+    'env': ['VLC_PLUGIN_PATH=' + vlc_build_root / 'modules'],
+}
+
+vlc_tests += {
     'name' : 'test_src_video_output_inhibit',
     'sources' : files('video_output/inhibit.c'),
     'suite' : ['src', 'test_src'],

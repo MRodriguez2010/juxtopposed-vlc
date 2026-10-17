@@ -81,6 +81,7 @@ check_PROGRAMS = \
 	test_src_misc_image \
 	test_src_misc_viewpoint \
 	test_src_video_output \
+	test_src_video_output_filter_format \
 	test_src_video_output_inhibit \
 	test_src_video_output_opengl \
 	test_src_video_output_spu \
@@ -396,6 +397,8 @@ test_src_video_output_SOURCES = \
 	src/video_output/video_output.h \
 	src/video_output/video_output_scenarios.c
 test_src_video_output_LDADD = $(LIBVLCCORE) $(LIBVLC)
+test_src_video_output_filter_format_SOURCES = src/video_output/filter_format.c
+test_src_video_output_filter_format_LDADD = $(LIBVLCCORE) $(LIBVLC)
 test_src_video_output_inhibit_SOURCES = src/video_output/inhibit.c
 test_src_video_output_inhibit_LDADD = $(LIBVLCCORE) $(LIBVLC)
 test_src_video_output_opengl_SOURCES = src/video_output/opengl.c

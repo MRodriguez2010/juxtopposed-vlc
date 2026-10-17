@@ -822,6 +822,12 @@ int vout_SetDisplayFormat(vout_display_t *vd, const video_format_t *fmt,
     return SetDisplayFormat(vd, fmt, fmt, vctx);
 }
 
+const video_format_t *vout_GetDisplayInputFormat(vout_display_t *vd)
+{
+    vout_display_priv_t *osys = container_of(vd, vout_display_priv_t, display);
+    return &osys->decoder_source;
+}
+
 int vout_ResizeDisplay(vout_display_t *vd, const video_format_t *fmt)
 {
     /* Keep the negotiated display chroma when the software source needs a

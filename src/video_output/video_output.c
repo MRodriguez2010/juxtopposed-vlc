@@ -156,6 +156,7 @@ typedef struct vout_thread_sys_t
     struct {
         vlc_mutex_t     lock;
         bool            changed;
+        bool            failed;
         bool            new_interlaced;
         char            *configuration;
         video_format_t    src_fmt;
@@ -869,6 +870,7 @@ static void ChangeFilters(vout_thread_sys_t *vout)
     vout_thread_sys_t *sys = vout;
     FilterFlush(vout, true);
     DelAllFilterCallbacks(vout);
+    sys->filter.failed = false;
 
     vlc_array_t array_static;
     vlc_array_t array_interactive;
@@ -959,19 +961,24 @@ static void ChangeFilters(vout_thread_sys_t *vout)
         vlc_array_clear(array);
     }
 
-    if (!es_format_IsSimilar(p_fmt_current, &fmt_target)) {
+    /* A previous filter can have changed the display's accepted chroma.
+     * Removing it must restore the decoder format, or convert to the format
+     * the display still accepts. User crop and aspect overrides are separate. */
+    es_format_t fmt_display;
+    es_format_InitFromVideo(&fmt_display, vout_GetDisplayInputFormat(sys->display));
+    if (!es_format_IsSimilar(p_fmt_current, &fmt_display)) {
         es_format_LogDifferences(vlc_object_logger(&vout->obj),
-                "current", p_fmt_current, "new", &fmt_target);
+                "current", &fmt_display, "new", p_fmt_current);
 
         /* Shallow local copy */
         es_format_t tmp = *p_fmt_current;
         /* Assign the same chroma to compare everything except the chroma */
-        tmp.i_codec = fmt_target.i_codec;
-        tmp.video.i_chroma = fmt_target.video.i_chroma;
+        tmp.i_codec = fmt_display.i_codec;
+        tmp.video.i_chroma = fmt_display.video.i_chroma;
 
         int ret = VLC_EGENERIC;
 
-        bool only_chroma_changed = es_format_IsSimilar(&tmp, &fmt_target);
+        bool only_chroma_changed = es_format_IsSimilar(&tmp, &fmt_display);
         if (only_chroma_changed)
         {
             picture_pool_t *new_private_pool =
@@ -1004,16 +1011,24 @@ static void ChangeFilters(vout_thread_sys_t *vout)
             msg_Dbg(&vout->obj, "Adding a filter to compensate for format changes in interactive chain (%p)",
                     (void*)sys->filter.chain_interactive);
             if (filter_chain_AppendConverter(sys->filter.chain_interactive,
-                                             &fmt_target) != VLC_SUCCESS) {
+                                             &fmt_display) != VLC_SUCCESS) {
                 msg_Err(&vout->obj, "Failed to compensate for the format changes, removing all filters");
                 DelAllFilterCallbacks(vout);
                 filter_chain_Reset(sys->filter.chain_static,      &fmt_target, vctx_target, &fmt_target);
                 filter_chain_Reset(sys->filter.chain_interactive, &fmt_target, vctx_target, &fmt_target);
+                if (!es_format_IsSimilar(&fmt_target, &fmt_display)
+                    && filter_chain_AppendConverter(sys->filter.chain_interactive,
+                                                    &fmt_display) != VLC_SUCCESS)
+                {
+                    msg_Err(&vout->obj, "Failed to convert the decoder format for the display");
+                    sys->filter.failed = true;
+                }
             }
         }
     }
 
     es_format_Clean(&fmt_target);
+    es_format_Clean(&fmt_display);
 
     sys->filter.changed = false;
 }
@@ -1220,11 +1235,14 @@ static picture_t *ConvertRGBAAndBlend(vout_thread_sys_t *vout, picture_t *pic,
 
 static picture_t *FilterPictureInteractive(vout_thread_sys_t *sys)
 {
-    // hold it as the filter chain will release it or return it and we release it
-    picture_Hold(sys->displayed.current);
-
     vlc_mutex_lock(&sys->filter.lock);
-    picture_t *filtered = filter_chain_VideoFilter(sys->filter.chain_interactive, sys->displayed.current);
+    picture_t *filtered = NULL;
+    if (!sys->filter.failed)
+    {
+        // hold it as the filter chain will release it or return it and we release it
+        picture_Hold(sys->displayed.current);
+        filtered = filter_chain_VideoFilter(sys->filter.chain_interactive, sys->displayed.current);
+    }
     vlc_mutex_unlock(&sys->filter.lock);
 
     if (filtered && filtered->date != sys->displayed.current->date)
@@ -1895,6 +1913,7 @@ static int vout_Start(vout_thread_sys_t *vout, vlc_video_context *vctx, const vo
     vlc_mutex_lock(&sys->filter.lock);
     sys->filter.chain_static = cs;
     sys->filter.chain_interactive = ci;
+    sys->filter.failed = false;
     vlc_mutex_unlock(&sys->filter.lock);
 
     vout_display_cfg_t dcfg;
