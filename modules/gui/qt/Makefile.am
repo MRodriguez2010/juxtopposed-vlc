@@ -195,6 +195,7 @@ libqt_plugin_la_SOURCES = \
 	maininterface/mainui.cpp \
 	maininterface/mainui.hpp \
 	maininterface/navigationmodel.cpp maininterface/navigationmodel.hpp \
+	maininterface/videobackdrop.cpp maininterface/videobackdrop.hpp \
 	maininterface/videosurface.cpp \
 	maininterface/videosurface.hpp \
 	maininterface/video_window_handler.cpp \
@@ -479,6 +480,7 @@ nodist_libqt_plugin_la_SOURCES = \
 	maininterface/mainctx_submodels.moc.cpp \
 	maininterface/mainui.moc.cpp \
 	maininterface/navigationmodel.moc.cpp \
+	maininterface/videobackdrop.moc.cpp \
 	maininterface/videosurface.moc.cpp \
 	maininterface/video_window_handler.moc.cpp \
 	medialibrary/medialib.moc.cpp \
@@ -1907,6 +1909,17 @@ test_dcomp_backdrop_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
 check_PROGRAMS += test_dcomp_backdrop
 TESTS += test_dcomp_backdrop
 endif
+
+test_video_backdrop_SOURCES = tests/test_video_backdrop.cpp maininterface/videobackdrop.cpp maininterface/videobackdrop.hpp
+nodist_test_video_backdrop_SOURCES = tests/test_video_backdrop.moc maininterface/videobackdrop.moc.cpp
+BUILT_SOURCES += tests/test_video_backdrop.moc
+CLEANFILES += tests/test_video_backdrop.moc
+test_video_backdrop_CPPFLAGS = $(QT_QTEST_COMMON_cppflags) -DTOP_SRCDIR=\"$(abs_top_srcdir)\"
+test_video_backdrop_CXXFLAGS = $(QT_QTEST_COMMON_cxxflags)
+test_video_backdrop_LDADD = $(QT_QTEST_COMMON_ldadd)
+test_video_backdrop_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
+check_PROGRAMS += test_video_backdrop
+TESTS += test_video_backdrop
 
 test_video_backdrop_reporter_SOURCES = tests/test_video_backdrop_reporter.cpp util/video_backdrop_reporter.hpp util/video_backdrop_region.hpp widgets/native/viewblockingrectangle.hpp
 nodist_test_video_backdrop_reporter_SOURCES = tests/test_video_backdrop_reporter.moc

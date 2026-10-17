@@ -24,9 +24,7 @@
 #include <QPointer>
 #include "qt.hpp"
 #include "util/vlchotkeyconverter.hpp"
-#include "util/video_backdrop_region.hpp"
-#include <QMap>
-#include <memory>
+#include "videobackdrop.hpp"
 
 #include <vlc_threads.h>
 
@@ -38,9 +36,8 @@ Q_MOC_INCLUDE( "maininterface/mainctx.hpp")
 
 class MainCtx;
 class VideoSurface;
-class VideoBackdropReporter;
 
-class VideoSurfaceProvider : public QObject
+class VideoSurfaceProvider : public VideoBackdropProvider
 {
     Q_OBJECT
 
@@ -62,9 +59,6 @@ public:
 
     bool supportsThreadedSurfaceUpdates() const { return m_threadedSurfaceUpdates; };
 
-    VideoBackdropState backdropRegions();
-    void setBackdropRegion(const VideoBackdropRegion &region);
-
 signals:
     void ctxChanged(MainCtx*);
     bool videoEnabledChanged(bool);
@@ -72,7 +66,6 @@ signals:
     void surfacePropertiesChanged(const std::optional<QSizeF>& size,
                                   const std::optional<QPointF>& position,
                                   const std::optional<qreal>& scale);
-    void backdropRegionsChanged(const VideoBackdropState &state);
 
 public slots:
     void onWindowClosed();
@@ -93,43 +86,7 @@ protected:
     bool m_videoEmbed = false;
     bool m_threadedSurfaceUpdates = false;
 
-private:
-    QMutex m_backdropLock;
-    QMap<quintptr, VideoBackdropRegion> m_backdropRegions;
-    quint64 m_backdropRevision = 0;
 };
-
-// Reports a floating surface to the native video compositor without painting it.
-class VideoBackdrop : public QQuickItem
-{
-    Q_OBJECT
-    Q_PROPERTY(VideoSurfaceProvider* videoSurfaceProvider READ provider WRITE setProvider NOTIFY providerChanged FINAL)
-    Q_PROPERTY(qreal blurRadius MEMBER m_blurRadius NOTIFY blurRadiusChanged FINAL)
-    Q_PROPERTY(qreal cornerRadius MEMBER m_cornerRadius NOTIFY cornerRadiusChanged FINAL)
-public:
-    explicit VideoBackdrop(QQuickItem *parent = nullptr);
-    ~VideoBackdrop() override;
-    VideoSurfaceProvider *provider() const { return m_provider; }
-    void setProvider(VideoSurfaceProvider *provider);
-
-signals:
-    void providerChanged();
-    void blurRadiusChanged();
-    void cornerRadiusChanged();
-
-protected:
-    QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *) override;
-    void itemChange(ItemChange, const ItemChangeData &) override;
-
-private:
-    void synchronizeSoftware();
-    QPointer<VideoSurfaceProvider> m_provider;
-    std::shared_ptr<VideoBackdropReporter> m_reporter;
-    QMetaObject::Connection m_frameConnection;
-    qreal m_blurRadius = 25;
-    qreal m_cornerRadius = 10;
-};
-
 
 class VideoSurface : public ViewBlockingRectangle
 {

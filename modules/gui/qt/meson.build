@@ -87,6 +87,7 @@ moc_headers = files(
     'maininterface/mainctx_submodels.hpp',
     'maininterface/mainui.hpp',
     'maininterface/navigationmodel.hpp',
+    'maininterface/videobackdrop.hpp',
     'maininterface/videosurface.hpp',
     'maininterface/video_window_handler.hpp',
     'medialibrary/medialib.hpp',
@@ -322,6 +323,8 @@ qt_plugin_sources = files(
     'maininterface/mainui.hpp',
     'maininterface/navigationmodel.cpp',
     'maininterface/navigationmodel.hpp',
+    'maininterface/videobackdrop.cpp',
+    'maininterface/videobackdrop.hpp',
     'maininterface/videosurface.cpp',
     'maininterface/videosurface.hpp',
     'maininterface/video_window_handler.cpp',
@@ -1458,6 +1461,15 @@ if qt6_dep.found()
                                  cc.find_library('d3d11'), cc.find_library('dcomp'), cc.find_library('dxguid')],
             }
         endif
+        vlc_tests += {
+            'name': 'test_qt_video_backdrop',
+            'sources': files('tests/test_video_backdrop.cpp', 'maininterface/videobackdrop.cpp'),
+            'moc_sources': files('tests/test_video_backdrop.cpp'),
+            'moc_headers': files('maininterface/videobackdrop.hpp'),
+            'suite': ['qt'],
+            'include_directories': qt_include_dir,
+            'dependencies': [qt6_dep, qt_extra_deps, qtest_qt6_dep],
+        }
         vlc_tests += {
             'name': 'test_qt_video_backdrop_reporter',
             'sources': files('tests/test_video_backdrop_reporter.cpp'),
