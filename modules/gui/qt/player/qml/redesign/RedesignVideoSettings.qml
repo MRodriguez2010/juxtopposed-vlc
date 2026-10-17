@@ -112,7 +112,7 @@ ColumnLayout {
         property string help
         property string emptyText
         Layout.fillWidth: true; Layout.minimumHeight: theme.dp(68)
-        Text { Layout.fillWidth: true; text: parent.label; color: theme.foreground; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
+        Text { Layout.fillWidth: true; text: parent.label; color: theme.playerLabel; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
         RedesignComboBox {
             objectName: parent.optionName + "Choice"
             Layout.preferredWidth: Math.min(theme.dp(217), root.width * .61); Layout.minimumWidth: 0
@@ -144,6 +144,7 @@ ColumnLayout {
     component FilterSlider: RedesignSettingSlider {
         required property string optionName
         Layout.fillWidth: true
+        labelColor: theme.playerLabel
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         visible: root.backend.describe(optionName).kind !== undefined
         currentValue: Number(root.current(optionName))
@@ -153,6 +154,7 @@ ColumnLayout {
     component FilterSwitch: RedesignSwitchRow {
         required property string filterName
         Layout.fillWidth: true
+        labelColor: theme.playerLabel
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         visible: root.backend.describe("filter:video-filter:" + filterName).kind !== undefined
         checked: root.enabledFilter(filterName)
@@ -182,6 +184,7 @@ ColumnLayout {
     component NumberOption: RedesignSettingSlider {
         required property string optionName
         Layout.fillWidth: true
+        labelColor: theme.playerLabel
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         visible: root.backend.describe(optionName).kind !== undefined
         currentValue: Number(root.current(optionName) || 0)
@@ -193,6 +196,7 @@ ColumnLayout {
         required property string optionName
         property real valueFactor: 1
         Layout.fillWidth: true; Layout.topMargin: theme.dp(10); Layout.bottomMargin: theme.dp(10)
+        labelColor: theme.playerLabel
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         visible: root.backend.describe(optionName).kind !== undefined
         currentValue: Number(root.current(optionName) || 0) * valueFactor
@@ -202,14 +206,15 @@ ColumnLayout {
     component OverlaySwitch: RedesignSwitchRow {
         required property string sourceName
         Layout.fillWidth: true
+        labelColor: theme.playerLabel
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         visible: root.backend.describe("filter:sub-source:" + sourceName).kind !== undefined
         checked: root.enabledFilter(sourceName, "sub-source")
         onToggled: checked => root.effect(sourceName, checked, "sub-source")
     }
 
-    Text { Layout.topMargin: theme.dp(12); Layout.bottomMargin: theme.dp(26); text: qsTr("Defaults"); color: theme.foreground; font.pixelSize: theme.dp(16) }
-    Text { Layout.bottomMargin: theme.dp(18); text: qsTr("Flip"); color: theme.foreground; font.pixelSize: theme.dp(14) }
+    Text { Layout.topMargin: theme.dp(12); Layout.bottomMargin: theme.dp(26); text: qsTr("Defaults"); color: theme.playerHeading; font.pixelSize: theme.dp(16) }
+    Text { Layout.bottomMargin: theme.dp(18); text: qsTr("Flip"); color: theme.playerLabel; font.pixelSize: theme.dp(14) }
     RowLayout {
         Layout.fillWidth: true; Layout.preferredHeight: theme.dp(44); spacing: theme.dp(2)
         Repeater {
@@ -220,6 +225,7 @@ ColumnLayout {
                 objectName: "videoFlip_" + index
                 Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.fillHeight: true
                 scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+                foreground: theme.playerLabel
                 caption: modelData; text: qsTr("Flip: %1").arg(modelData); selected: root.flip === index
                 background: Rectangle { radius: theme.dp(4); color: parent.selected ? theme.progress : parent.hovered ? theme.hover : theme.background; border.color: parent.visualFocus ? theme.accent : theme.field }
                 onClicked: root.setFlip(index)
@@ -230,6 +236,7 @@ ColumnLayout {
         objectName: "videoRotation"
         Layout.fillWidth: true; Layout.topMargin: theme.dp(28); Layout.bottomMargin: theme.dp(16)
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+        labelColor: theme.playerLabel
         label: qsTr("Rotate"); suffix: " deg"; decimals: 1; trimTrailingZeros: true
         from: -360; to: 360; stepSize: 1; currentValue: root.rotationDegrees
         sliderVisible: false
@@ -270,7 +277,7 @@ ColumnLayout {
     Choice { label: qsTr("Crop"); optionName: "crop"; choices: root.options(optionName, ["", "16:10", "16:9", "1.85:1", "2.21:1", "2.35:1", "2.39:1", "5:3", "4:3", "5:4", "1:1"].map(value => ({label: value || qsTr("Default"), value: value}))) }
     RowLayout {
         Layout.fillWidth: true; Layout.minimumHeight: theme.dp(68)
-        Text { Layout.fillWidth: true; text: qsTr("Render"); color: theme.foreground; font.pixelSize: theme.dp(14) }
+        Text { Layout.fillWidth: true; text: qsTr("Render"); color: theme.playerLabel; font.pixelSize: theme.dp(14) }
         Instantiator {
             id: renderers
             model: root.rendererModel
@@ -300,13 +307,13 @@ ColumnLayout {
         }
     }
     Rectangle { Layout.fillWidth: true; Layout.leftMargin: -theme.dp(24); Layout.rightMargin: -theme.dp(20); Layout.topMargin: theme.dp(12); height: theme.dp(1); color: theme.border }
-    Text { Layout.topMargin: theme.dp(20); text: qsTr("Filters"); color: theme.foreground; font.pixelSize: theme.dp(16) }
+    Text { Layout.topMargin: theme.dp(20); text: qsTr("Filters"); color: theme.playerHeading; font.pixelSize: theme.dp(16) }
     RedesignFilterSection {
         objectName: "videoEssentialSection"
         Layout.fillWidth: true; label: qsTr("Essential")
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         settings: ColumnLayout {
-            spacing: theme.dp(18)
+            spacing: theme.dp(19)
             FilterSlider { objectName: "videoHue"; label: qsTr("Hue"); optionName: "hue"; from: -180; to: 180; decimals: 1; stepSize: 1 }
             FilterSlider { objectName: "videoBrightness"; label: qsTr("Brightness"); optionName: "brightness"; from: 0; to: 2; decimals: 2; stepSize: .01 }
             FilterSlider { objectName: "videoContrast"; label: qsTr("Contrast"); optionName: "contrast"; from: 0; to: 2; decimals: 2; stepSize: .01 }
@@ -345,7 +352,7 @@ ColumnLayout {
                             horizontalAlignment: TextInput.AlignRight
                             leftInset: 0; rightInset: 0
                             background: Rectangle { radius: theme.dp(4); color: theme.field; border.color: parent.activeFocus ? theme.accent : "transparent" }
-                            Text { anchors.left: parent.left; anchors.leftMargin: theme.dp(12); anchors.verticalCenter: parent.verticalCenter; text: parent.modelData.label; color: theme.foreground; font: parent.font }
+                            Text { anchors.left: parent.left; anchors.leftMargin: theme.dp(12); anchors.verticalCenter: parent.verticalCenter; text: parent.modelData.label; color: theme.playerLabel; font: parent.font }
                             onActiveFocusChanged: if (activeFocus) selectAll()
                             onEditingFinished: {
                                 const input = text.trim().replace(/\s*px$/, "")
@@ -386,7 +393,7 @@ ColumnLayout {
                         columns: root.width < theme.dp(320) ? 2 : 3
                         columnSpacing: theme.dp(10); rowSpacing: theme.dp(10)
                         Layout.fillWidth: true; Layout.minimumHeight: theme.dp(52)
-                        Text { Layout.columnSpan: parent.columns === 2 ? 2 : 1; Layout.fillWidth: true; text: modelData.label; color: theme.foreground; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
+                        Text { Layout.columnSpan: parent.columns === 2 ? 2 : 1; Layout.fillWidth: true; text: modelData.label; color: theme.playerLabel; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
                         C.TextField {
                             id: colorField
                             objectName: "videoColor_" + modelData.name
@@ -434,6 +441,7 @@ ColumnLayout {
                 RedesignSwitchRow {
                     required property var modelData
                     Layout.fillWidth: true
+                    labelColor: theme.playerLabel
                     scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                     objectName: "videoGradientFlag_" + modelData.option
                     label: modelData.label; checked: root.enabledFilter("gradient") && !!root.current(modelData.option)
@@ -536,15 +544,17 @@ ColumnLayout {
                 objectName: "videoGenerateHdr"
                 Layout.fillWidth: true
                 visible: root.supportsHdrPolicy("generate")
+                labelColor: theme.playerLabel
                 scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                 label: qsTr("Generate HDR from SDR")
                 checked: root.current("d3d11-hdr-mode") === "generate"
                 onToggled: checked => root.backend.stage("d3d11-hdr-mode", checked ? "generate" : "auto")
             }
-            RedesignModelChoice { Layout.fillWidth: true; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; label: qsTr("Video Track"); choiceModel: root.videoTracksModel; onSelectionRequested: index => root.trackRequested(index) }
-            RedesignModelChoice { Layout.fillWidth: true; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; label: qsTr("Deinterlace"); choiceModel: root.deinterlaceModel; onSelectionRequested: index => root.deinterlaceRequested(index) }
+            RedesignModelChoice { Layout.fillWidth: true; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; labelColor: theme.playerLabel; label: qsTr("Video Track"); choiceModel: root.videoTracksModel; onSelectionRequested: index => root.trackRequested(index) }
+            RedesignModelChoice { Layout.fillWidth: true; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; labelColor: theme.playerLabel; label: qsTr("Deinterlace"); choiceModel: root.deinterlaceModel; onSelectionRequested: index => root.deinterlaceRequested(index) }
             RedesignSwitchRow {
                 Layout.fillWidth: true
+                labelColor: theme.playerLabel
                 scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                 label: qsTr("Brightness Threshold"); checked: root.enabledFilter("adjust") && !!root.current("brightness-threshold")
                 onToggled: checked => { if (root.backend.stage("brightness-threshold", checked) && checked) root.effect("adjust", true) }

@@ -9,6 +9,7 @@ RowLayout {
     property color accentColor: "#d37918"
     property bool lightTheme: false
     property string label
+    property color labelColor: theme.foreground
     property string emptyText
     property var choiceModel
     property var labelOverrides: ({})
@@ -29,7 +30,7 @@ RowLayout {
     Text {
         visible: !root.fullWidth
         Layout.fillWidth: true
-        text: root.label; color: theme.foreground
+        text: root.label; color: root.labelColor
         font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap
     }
     Instantiator {

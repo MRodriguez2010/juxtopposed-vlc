@@ -11,6 +11,7 @@ ColumnLayout {
     property bool lightTheme: false
     property string label
     property color labelColor: theme.foreground
+    property color valueColor: theme.foreground
     property string suffix
     property int decimals: 0
     property real currentValue: 0
@@ -26,9 +27,9 @@ ColumnLayout {
     property var ticks: []
     property string tickSuffix
     property bool positiveTickSign: false
-    property real trackHeight: 14
-    property real trackRadius: 5
-    property real trackInset: 0
+    property real trackHeight: 16
+    property real trackRadius: 6
+    property real trackInset: 2
     property real sliderTopMargin: 0
     property real sliderLeftMargin: 0
     property bool scaleLabelsVisible: true
@@ -81,7 +82,7 @@ ColumnLayout {
             // The integer validator of the standard SpinBox rejects those.
             contentItem: TextInput {
                 text: valueField.displayText
-                font: valueField.font; color: theme.foreground
+                font: valueField.font; color: root.valueColor
                 selectionColor: theme.accent; selectedTextColor: theme.background
                 verticalAlignment: TextInput.AlignVCenter
                 selectByMouse: true; clip: true
@@ -159,7 +160,7 @@ ColumnLayout {
             id: sliderHandle
             x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
             y: slider.topPadding + slider.availableHeight / 2 - height / 2
-            width: theme.dp(8); height: theme.dp(24); radius: theme.dp(4); color: theme.accent
+            width: theme.dp(8); height: theme.dp(24); radius: theme.dp(4); color: theme.menuAccent
             border.width: slider.visualFocus ? 1 : 0; border.color: theme.bright
         }
     }

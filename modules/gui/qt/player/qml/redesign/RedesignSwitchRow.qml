@@ -26,7 +26,7 @@ RowLayout {
     T.Button {
         id: toggle
         objectName: "settingSwitch"
-        Layout.preferredWidth: theme.dp(64); Layout.preferredHeight: theme.dp(30)
+        Layout.preferredWidth: theme.dp(68); Layout.preferredHeight: theme.dp(32)
         checkable: true; checked: root.checked
         hoverEnabled: true; focusPolicy: Qt.StrongFocus
         Accessible.name: root.accessibleName
@@ -39,15 +39,21 @@ RowLayout {
         }
         contentItem: Item {
             Rectangle {
+                visible: !toggle.checked
+                x: root.theme.dp(32); y: root.theme.dp(3)
+                width: parent.width - x - root.theme.dp(3); height: parent.height - root.theme.dp(6)
+                radius: root.theme.dp(3); color: root.theme.background
+            }
+            Rectangle {
                 x: toggle.checked ? parent.width - width - root.theme.dp(3) : root.theme.dp(3)
                 y: root.theme.dp(3); width: root.theme.dp(26); height: parent.height - root.theme.dp(6)
-                radius: root.theme.dp(3); color: toggle.checked ? root.theme.accent : "#444444"
+                radius: root.theme.dp(3); color: toggle.checked ? root.theme.accent : "#404040"
             }
             Text {
-                x: toggle.checked ? root.theme.dp(8) : root.theme.dp(34)
+                x: toggle.checked ? root.theme.dp(8) : root.theme.dp(36)
                 anchors.verticalCenter: parent.verticalCenter
                 text: toggle.checked ? qsTr("ON") : qsTr("OFF")
-                font.pixelSize: root.theme.dp(12); color: toggle.checked ? root.theme.accent : root.theme.foreground
+                font.pixelSize: root.theme.dp(12); color: toggle.checked ? root.theme.accent : root.theme.playerLabel
             }
         }
     }

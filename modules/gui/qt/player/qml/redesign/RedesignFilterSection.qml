@@ -17,7 +17,7 @@ ColumnLayout {
     spacing: 0
     Text {
         Layout.fillWidth: true; Layout.leftMargin: theme.dp(4); Layout.topMargin: theme.dp(20); Layout.bottomMargin: theme.dp(18)
-        text: root.label; color: theme.foreground; font.pixelSize: theme.dp(14)
+        text: root.label; color: theme.playerLabel; font.pixelSize: theme.dp(14)
     }
     Rectangle {
         Layout.fillWidth: true
@@ -35,7 +35,7 @@ ColumnLayout {
                 background: Rectangle { radius: theme.dp(4); color: parent.hovered ? theme.hover : "transparent"; border.width: parent.visualFocus ? 1 : 0; border.color: theme.accent }
                 contentItem: RowLayout {
                     spacing: theme.dp(8)
-                    Text { Layout.fillWidth: true; Layout.leftMargin: theme.dp(16); text: parent.parent.text; color: theme.foreground; font.pixelSize: theme.dp(14) }
+                    Text { Layout.fillWidth: true; Layout.leftMargin: theme.dp(16); text: parent.parent.text; color: theme.playerLabel; font.pixelSize: theme.dp(14) }
                     RedesignIcon { Layout.rightMargin: theme.dp(12); name: root.expanded ? "chevron-down" : "chevron-right"; color: theme.foreground; Layout.preferredWidth: theme.dp(20); Layout.preferredHeight: theme.dp(20) }
                 }
                 onClicked: root.expanded = !root.expanded

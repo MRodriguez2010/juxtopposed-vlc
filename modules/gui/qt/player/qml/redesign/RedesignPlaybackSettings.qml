@@ -35,6 +35,7 @@ ColumnLayout {
         Layout.fillWidth: true
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         label: qsTr("Show Subtitle Timeline on Seekbar"); checked: root.showSubtitleTimeline
+        labelColor: theme.playerLabel
         onToggled: checked => root.subtitleTimelineRequested(checked)
     }
     Text {
@@ -51,6 +52,7 @@ ColumnLayout {
         Layout.fillWidth: true
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         label: qsTr("Show Statistics"); checked: root.showStatistics
+        labelColor: theme.playerLabel
         onToggled: checked => root.statisticsRequested(checked)
     }
     RedesignSwitchRow {
@@ -58,6 +60,7 @@ ColumnLayout {
         Layout.fillWidth: true
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         label: qsTr("Reverse"); checked: root.reversed; enabled: root.reverseAvailable || root.reversed
+        labelColor: theme.playerLabel
         onToggled: checked => root.reverseRequested(checked)
     }
     RowLayout {
@@ -66,7 +69,7 @@ ColumnLayout {
         spacing: theme.dp(12)
         Text {
             Layout.fillWidth: true
-            text: qsTr("Sleep Timer"); color: theme.foreground
+            text: qsTr("Sleep Timer"); color: theme.playerLabel
             font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap
         }
         RedesignComboBox {
@@ -86,6 +89,7 @@ ColumnLayout {
         Layout.fillWidth: true
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         label: qsTr("Audio Visualizer"); emptyText: qsTr("Disabled")
+        labelColor: theme.playerLabel
         choiceModel: root.visualizationModel
         labelOverrides: ({"Disable": qsTr("Disabled")})
         onSelectionRequested: index => root.visualizationRequested(index)
@@ -95,10 +99,13 @@ ColumnLayout {
         Layout.fillWidth: true; Layout.topMargin: theme.dp(16)
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         label: qsTr("Speed"); suffix: "x"; decimals: 5; trimTrailingZeros: true
+        labelColor: theme.playerLabel
+        valueColor: theme.playerLabel
         from: 0.25; to: 2; stepSize: 0.05
         inputFrom: 0.03125; inputTo: 31.25
         ticks: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
         sliderTopMargin: 10
+        sliderLeftMargin: -4
         currentValue: Math.abs(root.playbackRate); enabled: root.rateAvailable
         onMoved: value => root.rateRequested(value)
     }
