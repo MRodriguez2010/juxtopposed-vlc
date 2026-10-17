@@ -73,6 +73,7 @@ FocusScope {
     function refreshSeekPreview() { if (libraryExpanded) miniPlayer.refreshPreview(); else seek.refreshPreview() }
     property Component titleBarDragContent
     property Component videoContent
+    property Component videoBackdropContent
     property Component libraryContent
     property Component queueContent
     property Component settingsContent
@@ -387,6 +388,12 @@ FocusScope {
         color: theme.floatingPanel
         radius: theme.dp(10)
         border.width: 0
+        Loader {
+            anchors.fill: parent
+            z: -1
+            sourceComponent: root.videoBackdropContent
+            active: (root.queueOpen && !root.floatingQueue) || root.settingsPage.length > 0
+        }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }
         Loader {
             id: queueLoader

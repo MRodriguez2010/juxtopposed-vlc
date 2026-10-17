@@ -568,6 +568,7 @@ qt_plugin_sources = files(
     'widgets/native/searchlineedit.hpp',
     'widgets/native/viewblockingrectangle.cpp',
     'util/video_backdrop_region.hpp',
+    'util/video_backdrop_reporter.hpp',
     'widgets/native/viewblockingrectangle.hpp',
     'widgets/native/doubleclickignoringitem.hpp',
 )
@@ -1457,6 +1458,14 @@ if qt6_dep.found()
                                  cc.find_library('d3d11'), cc.find_library('dcomp'), cc.find_library('dxguid')],
             }
         endif
+        vlc_tests += {
+            'name': 'test_qt_video_backdrop_reporter',
+            'sources': files('tests/test_video_backdrop_reporter.cpp'),
+            'moc_sources': files('tests/test_video_backdrop_reporter.cpp'),
+            'suite': ['qt'],
+            'include_directories': qt_include_dir,
+            'dependencies': [qt6_dep, qt_extra_deps, qtest_qt6_dep],
+        }
         vlc_tests += {
             'name': 'test_qt_viewblockingrectangle',
             'sources': files('tests/test_viewblockingrectangle.cpp', 'widgets/native/viewblockingrectangle.cpp'),

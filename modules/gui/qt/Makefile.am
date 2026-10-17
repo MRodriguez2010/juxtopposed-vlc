@@ -392,6 +392,7 @@ libqt_plugin_la_SOURCES = \
 	util/sgmanipulator.hpp \
 	util/pointingtooltipattached.hpp \
 	util/video_backdrop_region.hpp \
+	util/video_backdrop_reporter.hpp \
 	widgets/native/animators.cpp \
 	widgets/native/animators.hpp \
 	widgets/native/customwidgets.cpp widgets/native/customwidgets.hpp \
@@ -1906,6 +1907,17 @@ test_dcomp_backdrop_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
 check_PROGRAMS += test_dcomp_backdrop
 TESTS += test_dcomp_backdrop
 endif
+
+test_video_backdrop_reporter_SOURCES = tests/test_video_backdrop_reporter.cpp util/video_backdrop_reporter.hpp util/video_backdrop_region.hpp widgets/native/viewblockingrectangle.hpp
+nodist_test_video_backdrop_reporter_SOURCES = tests/test_video_backdrop_reporter.moc
+BUILT_SOURCES += tests/test_video_backdrop_reporter.moc
+CLEANFILES += tests/test_video_backdrop_reporter.moc
+test_video_backdrop_reporter_CPPFLAGS = $(QT_QTEST_COMMON_cppflags)
+test_video_backdrop_reporter_CXXFLAGS = $(QT_QTEST_COMMON_cxxflags)
+test_video_backdrop_reporter_LDADD = $(QT_QTEST_COMMON_ldadd)
+test_video_backdrop_reporter_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
+check_PROGRAMS += test_video_backdrop_reporter
+TESTS += test_video_backdrop_reporter
 
 test_viewblockingrectangle_SOURCES = tests/test_viewblockingrectangle.cpp widgets/native/viewblockingrectangle.cpp widgets/native/viewblockingrectangle.hpp
 nodist_test_viewblockingrectangle_SOURCES = tests/test_viewblockingrectangle.moc widgets/native/viewblockingrectangle.moc.cpp

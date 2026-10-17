@@ -135,6 +135,14 @@ FocusScope {
         resumeAvailable: rootPlayer.resumeAvailable
         timeForPosition: value => rootPlayer.clockText(Player.length.scale(value))
         seekPreviewImage: Player.seekPreview
+        videoBackdropContent: Component {
+            VideoBackdrop {
+                videoSurfaceProvider: MainCtx.videoSurfaceProvider
+                visible: MainCtx.backdropBlurRequested()
+                blurRadius: 25 * view.scaleFactor
+                cornerRadius: 10 * view.scaleFactor
+            }
+        }
         seekThumbnailContent: Component {
             Widgets.ImageExt {
                 objectName: "seekThumbnailImage"

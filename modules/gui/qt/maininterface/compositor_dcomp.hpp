@@ -43,6 +43,7 @@ class IDCompositionTarget;
 namespace vlc {
 
 class CompositorDCompositionAcrylicSurface;
+class DCompVideoBackdrop;
 
 class CompositorDirectComposition : public CompositorVideo
 {
@@ -104,7 +105,10 @@ private:
     IDCompositionDevice *m_dcompDevice = nullptr;
     Microsoft::WRL::ComPtr<IDCompositionVisual> m_rootVisual;
     Microsoft::WRL::ComPtr<IDCompositionVisual> m_videoVisual;
+    Microsoft::WRL::ComPtr<IDCompositionVisual> m_videoProxy;
     IDCompositionVisual *m_uiVisual = nullptr;
+    std::shared_ptr<DCompVideoBackdrop> m_videoBackdrop;
+    QMetaObject::Connection m_backdropConnection;
 
     std::unique_ptr<CompositorDCompositionAcrylicSurface> m_acrylicSurface;
 };

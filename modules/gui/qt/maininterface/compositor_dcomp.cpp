@@ -49,6 +49,8 @@
 #endif
 
 #include "compositor_dcomp_acrylicsurface.hpp"
+#include "compositor_dcomp_backdrop.hpp"
+#include "videosurface.hpp"
 #include "maininterface/interface_window_handler.hpp"
 
 #include <memory>
@@ -66,6 +68,8 @@ int CompositorDirectComposition::windowEnable(const vlc_window_cfg_t *)
     commonWindowEnable();
 
     const auto ret = m_rootVisual->AddVisual(m_videoVisual.Get(), FALSE, m_uiVisual);
+    if (ret == S_OK && m_videoBackdrop)
+        m_videoBackdrop->setEnabled(true);
     m_dcompDevice->Commit();
 
     if (ret == S_OK)
@@ -80,6 +84,8 @@ void CompositorDirectComposition::windowDisable()
     assert(m_rootVisual);
     assert(m_videoVisual);
 
+    if (m_videoBackdrop)
+        m_videoBackdrop->setEnabled(false);
     commonWindowDisable();
 
     const auto ret = m_rootVisual->RemoveVisual(m_videoVisual.Get());
@@ -89,6 +95,7 @@ void CompositorDirectComposition::windowDisable()
 
 void CompositorDirectComposition::windowDestroy()
 {
+    m_videoProxy.Reset();
     m_videoVisual.Reset();
     CompositorVideo::windowDestroy();
 }
@@ -244,6 +251,12 @@ bool CompositorDirectComposition::setup()
     res = m_rootVisual->AddVisual(m_uiVisual, FALSE, NULL);
     assert(res == S_OK);
 
+    m_videoBackdrop = std::make_shared<DCompVideoBackdrop>(m_dcompDevice, m_rootVisual.Get(), m_uiVisual);
+    m_backdropConnection = connect(m_videoSurfaceProvider.get(), &VideoSurfaceProvider::backdropRegionsChanged,
+        this, [backdrop = m_videoBackdrop](const VideoBackdropState &state) { backdrop->setRegions(state); },
+        Qt::DirectConnection);
+    m_videoBackdrop->setRegions(m_videoSurfaceProvider->backdropRegions());
+
     m_setupState = SetupState::Success;
     m_setupStateCond.notify_all();
     lock.unlock();
@@ -276,6 +289,12 @@ bool CompositorDirectComposition::setup()
 
 void CompositorDirectComposition::cleanup()
 {
+    disconnect(m_backdropConnection);
+    if (m_videoBackdrop)
+        m_videoBackdrop->close();
+    m_videoBackdrop.reset();
+    // The vout keeps this raw handle until windowDestroy(). A closed backdrop
+    // retains the real COM objects but cannot add new effects during teardown.
     m_videoVisual.Reset();
     m_acrylicSurface.reset();
 
@@ -370,6 +389,8 @@ void CompositorDirectComposition::onSurfacePositionChanged(const QPointF& positi
 
     m_videoVisual->SetOffsetX(position.x());
     m_videoVisual->SetOffsetY(position.y());
+    if (m_videoBackdrop)
+        m_videoBackdrop->setPosition(position);
 
     // WARNING: Commit is requested explicitly through `::commitSurface()` after size
     //          and position changes are applied.
@@ -463,7 +484,8 @@ bool CompositorDirectComposition::setupVoutWindow(vlc_window_t *p_wnd, VoutDestr
     p_wnd->type = VLC_WINDOW_TYPE_DCOMP;
 
     p_wnd->display.dcomp_device = m_dcompDevice;
-    p_wnd->handle.dcomp_visual = m_videoVisual.Get();
+    m_videoProxy.Attach(makeVideoBackdropProxy(m_videoVisual.Get(), m_videoBackdrop));
+    p_wnd->handle.dcomp_visual = m_videoProxy.Get();
 
     return true;
 }

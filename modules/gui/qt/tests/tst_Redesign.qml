@@ -12,6 +12,36 @@ TestCase {
     visible: true
     property var seekEventOrder: []
     property bool consumeVideoHover: false
+    property int activeBackdrops: 0
+    Component {
+        id: backdropProbe
+        Item {
+            objectName: "backdropProbe"
+            Component.onCompleted: testCase.activeBackdrops++
+            Component.onDestruction: testCase.activeBackdrops--
+        }
+    }
+
+    function test_backdropFollowsFloatingPanelLifetime() {
+        player.videoBackdropContent = backdropProbe
+        const video = findChild(player, "redesignViewport")
+        const original = video.mapToItem(player, 0, 0)
+        player.settingsPage = "playback"
+        tryCompare(testCase, "activeBackdrops", 1)
+        const panel = findChild(player, "redesignRightPanel")
+        const backdrop = findChild(panel, "backdropProbe")
+        verify(backdrop !== null)
+        compare(backdrop.width, panel.width)
+        compare(backdrop.height, panel.height)
+        compare(video.mapToItem(player, 0, 0), original)
+        player.settingsPage = ""
+        tryCompare(testCase, "activeBackdrops", 0)
+        player.queueOpen = true
+        tryCompare(testCase, "activeBackdrops", 1)
+        compare(video.mapToItem(player, 0, 0), original)
+        player.queueOpen = false
+        tryCompare(testCase, "activeBackdrops", 0)
+    }
 
     RedesignPlayerView {
         id: player
@@ -146,6 +176,7 @@ TestCase {
         compactCategorySpy.clear()
         player.queueOpen = false
         player.settingsPage = ""
+        player.videoBackdropContent = null
         player.playing = false
         player.muted = false
         player.fullscreen = false

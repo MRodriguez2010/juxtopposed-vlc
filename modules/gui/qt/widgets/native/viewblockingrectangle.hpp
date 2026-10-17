@@ -32,8 +32,9 @@
 class MatrixChangeObserverNode : public QSGRenderNode
 {
 public:
-    explicit MatrixChangeObserverNode(const std::function<void(const QMatrix4x4&)>& callback)
-        : m_callback(callback) { }
+    explicit MatrixChangeObserverNode(const std::function<void(const QMatrix4x4&)>& callback,
+                                      bool everyFrame = false)
+        : m_callback(callback), m_everyFrame(everyFrame) { }
 
     // Observe render-thread animations after synchronization. A layer renderer
     // starts at a nested root, so its pass matrix is not in window coordinates.
@@ -45,7 +46,7 @@ public:
         for (const QSGNode *node = parent(); node; node = node->parent())
             if (node->type() == QSGNode::TransformNodeType)
                 m = static_cast<const QSGTransformNode *>(node)->matrix() * m;
-        if (m_lastCombinedMatrix != m)
+        if (m_everyFrame || m_lastCombinedMatrix != m)
         {
             m_callback(m);
             m_lastCombinedMatrix = m;
@@ -65,6 +66,7 @@ public:
 private:
     std::function<void(const QMatrix4x4& newMatrix)> m_callback;
     QMatrix4x4 m_lastCombinedMatrix;
+    bool m_everyFrame;
 };
 
 class ViewBlockingRectangle : public QQuickItem
