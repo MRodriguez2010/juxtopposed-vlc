@@ -118,7 +118,7 @@ Item {
         sortPopup = sortMenuComponent.createObject(root, {
             entries: sorting.options.map(option => ({action: option.id, label: option.label}))
         })
-        sortPopup.popup(anchor, 0, anchor.height)
+        sortPopup.toggleFrom(anchor)
     }
     property int menuRequest: 0
     onBreadcrumbsChanged: { ++menuRequest; itemMenu.close() }
@@ -236,7 +236,7 @@ Item {
         id: button
         objectName: "libraryMoreButton"
         iconName: "more"; text: qsTr("More library actions")
-        onClicked: moreMenu.popup(button, 0, height)
+        onClicked: moreMenu.toggleFrom(button)
     }
     component SortButton: LibraryButton {
         id: button
@@ -251,7 +251,7 @@ Item {
         id: button
         objectName: "libraryViewButton"
         iconName: root.grid ? "grid" : "list-view"; text: qsTr("View options")
-        onClicked: viewMenu.popup(button, 0, height)
+        onClicked: viewMenu.toggleFrom(button)
     }
     component ItemCount: Text {
         text: qsTr("%n item", "%n items", root.itemCount)

@@ -44,7 +44,16 @@ FocusScope {
         moveRequested(from, to > from ? to + 1 : to)
         selectedIndex = to
     }
-    function openActions() { actionsMenu.popup() }
+    function openActions(anchor, point) {
+        if (anchor && point) { actionsMenu.popup(anchor, point); return }
+        if (actionIndex >= 0 && actionIndex < itemCount) {
+            list.positionViewAtIndex(actionIndex, ListView.Contain)
+            list.forceLayout()
+            const row = list.itemAtIndex(actionIndex)
+            if (row) { actionsMenu.popup(list, row.mapToItem(list, theme.dp(24), row.height)); return }
+        }
+        actionsMenu.popup(list, Qt.point(0, 0))
+    }
     function runAction(action) {
         if (action === "remove") removeSelection()
         else if (action === "earlier") moveToRow(actionIndex, actionIndex - 1)
@@ -92,7 +101,7 @@ FocusScope {
                 text: qsTr("%n item", "%n items", root.itemCount) + (root.totalDurationText.length > 0 ? " - " + root.totalDurationText : "")
                 elide: Text.ElideRight; color: theme.foreground; font.pixelSize: theme.dp(14)
             }
-            QueueButton { objectName: "queueSortButton"; iconName: "sort"; text: qsTr("Sort queue"); enabled: root.itemCount > 1 && root.sortChoices.length > 0; onClicked: sortMenu.popup() }
+            QueueButton { objectName: "queueSortButton"; iconName: "sort"; text: qsTr("Sort queue"); enabled: root.itemCount > 1 && root.sortChoices.length > 0; onClicked: sortMenu.toggleFrom(this) }
             QueueButton { objectName: "queueRepeatButton"; iconName: "repeat"; text: qsTr("Repeat"); selected: root.repeating; onClicked: root.repeatRequested() }
             QueueButton { objectName: "queueShuffleButton"; iconName: "shuffle"; text: qsTr("Shuffle"); selected: root.random; onClicked: root.shuffleRequested() }
             QueueButton { objectName: "queueRemoveButton"; iconName: "remove"; text: qsTr("Remove from queue"); enabled: root.actionIndex >= 0 && root.actionIndex < root.itemCount; onClicked: root.removeSelection() }
@@ -147,7 +156,6 @@ FocusScope {
                         Text { objectName: "queueDuration_" + row.index; text: root.durationText(row.model.duration); font.pixelSize: theme.dp(14); color: theme.foreground }
                     }
                     onClicked: { root.selectedIndex = row.index; root.playRequested(row.index) }
-                    TapHandler { acceptedButtons: Qt.RightButton; onTapped: { root.selectedIndex = row.index; root.openActions() } }
                 }
                 Rectangle {
                     parent: list.contentItem
@@ -162,7 +170,18 @@ FocusScope {
                 text: qsTr("Drop files here, or add media from your library.")
                 wrapMode: Text.WordWrap; color: theme.foreground; font.pixelSize: theme.dp(14)
             }
-            TapHandler { acceptedButtons: Qt.RightButton; onTapped: root.openActions() }
+        }
+    }
+    // Item views can parent pointer handlers to their scrolling contentItem.
+    // Map through scene coordinates to get a position in the viewport.
+    TapHandler {
+        parent: list
+        acceptedButtons: Qt.RightButton
+        onTapped: point => {
+            const position = list.mapFromItem(null, point.scenePosition)
+            const index = list.indexAt(position.x + list.contentX, position.y + list.contentY)
+            if (index >= 0) root.selectedIndex = index
+            root.openActions(list, position)
         }
     }
     RedesignActionMenu {

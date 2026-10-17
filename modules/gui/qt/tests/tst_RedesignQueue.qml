@@ -121,6 +121,52 @@ TestCase {
         mouseClick(findChild(menu, "libraryAction_reverse"))
         compare(Array.from(sortSpy.signalArguments[0]), [11, true])
     }
+    function test_sortMenuAnchorsAndToggles() {
+        const button = findChild(queue, "queueSortButton")
+        const menu = findChild(queue, "queueSortMenu")
+        mouseMove(testCase, 10, 580)
+        button.forceActiveFocus(); keyClick(Qt.Key_Space)
+        tryCompare(menu, "opened", true)
+        const point = menu.background.mapToItem(testCase, 0, 0)
+        compare(point.y, button.mapToItem(testCase, 0, button.height).y)
+        verify(point.x <= button.mapToItem(testCase, 0, 0).x + button.width)
+        mouseClick(button)
+        tryCompare(menu, "visible", false)
+    }
+    function test_rightClickSelectsRowAtClickPosition_data() {
+        return [{tag: "first", index: 0}, {tag: "scrolled", index: 12}]
+    }
+    function test_rightClickSelectsRowAtClickPosition(data) {
+        for (let index = 3; index < 30; ++index) media.append({title: "Item " + index, isCurrent: false})
+        const list = findChild(queue, "queueList")
+        list.forceLayout()
+        list.positionViewAtIndex(data.index, ListView.Beginning)
+        wait(50)
+        const row = findChild(queue, "queueItem_" + data.index)
+        const point = row.mapToItem(testCase, 60, row.height / 2)
+        mouseClick(row, 60, row.height / 2, Qt.RightButton)
+        const menu = findChild(queue, "queueActionsMenu")
+        tryCompare(menu, "opened", true)
+        compare(queue.selectedIndex, data.index)
+        const origin = menu.background.mapToItem(testCase, 0, 0)
+        compare(origin.x, point.x); compare(origin.y, point.y)
+        compare(playSpy.count, 0)
+    }
+    function test_keyboardContextScrollsToSelectedRow() {
+        for (let index = 3; index < 30; ++index) media.append({title: "Item " + index, isCurrent: false})
+        queue.selectedIndex = 25
+        queue.forceActiveFocus(); keyClick(Qt.Key_F10, Qt.ShiftModifier)
+        const menu = findChild(queue, "queueActionsMenu")
+        const list = findChild(queue, "queueList")
+        tryCompare(menu, "opened", true)
+        verify(list.contentY > 0)
+        const row = findChild(queue, "queueItem_25")
+        verify(row !== null)
+        const point = row.mapToItem(list, 0, 0)
+        verify(point.y >= 0 && point.y + row.height <= list.height)
+        compare(menu.parent, list)
+        compare(playSpy.count, 0)
+    }
     function test_sortAndReverseUseSelectedNativeCriterion() {
         mouseClick(findChild(queue, "queueSortButton"))
         const menu = findChild(queue, "queueSortMenu")

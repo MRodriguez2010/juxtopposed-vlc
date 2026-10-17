@@ -90,7 +90,7 @@ C.Control {
             text: "..."
             Accessible.name: qsTr("Parent locations")
             toolTipText: qsTr("Parent locations")
-            onClicked: ancestors.popup(overflow, 0, height)
+            onClicked: ancestors.toggleFrom(overflow)
         }
         Repeater {
             model: root.entries

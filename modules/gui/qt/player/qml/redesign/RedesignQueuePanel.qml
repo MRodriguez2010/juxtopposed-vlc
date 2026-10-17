@@ -36,7 +36,7 @@ Item {
                 scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                 iconName: "more"; text: qsTr("Queue views")
                 enabled: root.floating || root.tab === 0
-                onClicked: if (root.floating) viewsMenu.popup(); else if (queueBody.item) queueBody.item.openActions()
+                onClicked: viewsMenu.toggleFrom(this)
                 RedesignActionMenu {
                     id: viewsMenu
                     videoBackdropContent: root.videoBackdropContent

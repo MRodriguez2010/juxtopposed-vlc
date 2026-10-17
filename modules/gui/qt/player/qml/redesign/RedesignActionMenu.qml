@@ -11,12 +11,29 @@ C.Menu {
     property Component videoBackdropContent
     property var entries: []
     property string checkedAction: ""
+    property Item buttonAnchor: null
+    readonly property real windowHeight: parent && parent.Window.window ? parent.Window.window.height : implicitHeight + 2 * margins
+    readonly property real spaceAbove: buttonAnchor ? Math.max(0, Math.min(windowHeight,
+        buttonAnchor.mapToItem(buttonAnchor.Window.window.contentItem, 0, 0).y) - margins) : 0
+    readonly property real spaceBelow: buttonAnchor ? Math.max(0, windowHeight - margins
+        - buttonAnchor.mapToItem(buttonAnchor.Window.window.contentItem, 0, buttonAnchor.height).y) : 0
+    readonly property bool opensBelow: implicitHeight <= spaceBelow || spaceBelow >= spaceAbove
     signal actionRequested(string action)
     readonly property RedesignTheme theme: RedesignTheme { scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor }
     width: theme.dp(265)
     padding: theme.dp(4)
     margins: theme.dp(10)
-    height: Math.min(implicitHeight, parent && parent.Window.window ? parent.Window.window.height - 2 * margins : implicitHeight)
+    height: Math.max(0, Math.min(implicitHeight, buttonAnchor ? opensBelow ? spaceBelow : spaceAbove : windowHeight - 2 * margins))
+    closePolicy: C.Popup.CloseOnEscape | (buttonAnchor ? C.Popup.CloseOnPressOutsideParent : C.Popup.CloseOnPressOutside)
+    function toggleFrom(anchor) {
+        if (visible) { close(); return }
+        buttonAnchor = anchor
+        parent = anchor
+        x = Qt.binding(() => root.mirrored ? anchor.width - root.width : 0)
+        y = Qt.binding(() => root.opensBelow ? anchor.height : -root.height)
+        open()
+    }
+    onClosed: buttonAnchor = null
     popupType: C.Popup.Item
     background: Rectangle {
         id: surface
