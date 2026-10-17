@@ -446,8 +446,10 @@ void RedesignPreferences::setCtx(MainCtx* ctx)
     if (m_ctx == ctx) return;
     stopStereoTest();
     if (m_ctx) disconnect(m_ctx, &MainCtx::redesignPlayerPreferencesChanged, this, &RedesignPreferences::refresh);
+    if (m_ctx) disconnect(m_ctx, &MainCtx::backdropBlurEnabledChanged, this, &RedesignPreferences::refresh);
     m_ctx = ctx;
     if (m_ctx) connect(m_ctx, &MainCtx::redesignPlayerPreferencesChanged, this, &RedesignPreferences::refresh);
+    if (m_ctx) connect(m_ctx, &MainCtx::backdropBlurEnabledChanged, this, &RedesignPreferences::refresh);
     emit ctxChanged();
     refresh();
 }
@@ -873,7 +875,10 @@ QVariant RedesignPreferences::value(const QString& name) const
     }
 
     const auto it = m_edits.constFind(name);
-    return it == m_edits.cend() ? read(name.toUtf8()) : *it;
+    if (it != m_edits.cend()) return *it;
+    if (m_ctx && name == QLatin1String("qt-backdrop-blur"))
+        return m_ctx->backdropBlurRequested();
+    return read(name.toUtf8());
 }
 
 QVariant RedesignPreferences::videoValue(const QString& name) const
@@ -1331,7 +1336,8 @@ bool RedesignPreferences::stage(const QString& name, const QVariant& proposed)
     if (!effect.isEmpty())
         stage(QStringLiteral("filter:video-filter:") + effect, true);
 
-    bool applyToPlayer = false;
+    bool applyToPlayer = m_ctx && name == QLatin1String("qt-backdrop-blur")
+        && normalized.toBool() != m_ctx->backdropBlurRequested();
     if (m_ctx && (name == QLatin1String("sub-text-scale") || name == QLatin1String("sub-text-size-mode")
         || name == QLatin1String("sub-text-size-pixels"))) {
         auto *player = m_ctx->getIntf()->p_player;
@@ -1430,6 +1436,13 @@ bool RedesignPreferences::save()
     }
     // These controls are inherited by the current input and action dispatcher.
     auto* instance = vlc_object_instance(m_ctx->getIntf());
+    if (previous.contains(QStringLiteral("qt-backdrop-blur"))) {
+        // An explicit UI choice replaces a startup override for this interface.
+        auto* intf = m_ctx->getIntf();
+        if (var_Type(intf, "qt-backdrop-blur") == 0)
+            var_Create(intf, "qt-backdrop-blur", VLC_VAR_BOOL);
+        var_SetBool(intf, "qt-backdrop-blur", bool(config_GetInt("qt-backdrop-blur")));
+    }
     for (const auto& name : {QStringLiteral("mouse-pause-policy"), QStringLiteral("hotkeys-x-wheel-mode"),
                             QStringLiteral("hotkeys-y-wheel-mode"), QStringLiteral("hotkeys-wheel-direction")}) {
         if (!previous.contains(name)) continue;
@@ -1705,6 +1718,9 @@ bool RedesignPreferences::resetAll()
     }
 #endif
     intf->preferencesResetPending = true;
+    if (var_Type(intf, "qt-backdrop-blur") == 0)
+        var_Create(intf, "qt-backdrop-blur", VLC_VAR_BOOL);
+    var_SetBool(intf, "qt-backdrop-blur", bool(config_GetInt("qt-backdrop-blur")));
     vlc_subpicture_InvalidateTextStyle();
     vlc_player_Lock(intf->p_player);
     vlc_player_SetSubtitleTextScale(intf->p_player, config_GetInt("sub-text-scale"));
