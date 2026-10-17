@@ -5,8 +5,10 @@ import QtQuick.Controls.Basic as C
 
 C.Popup {
     id: root
+    popupType: C.Popup.Item
     property real scaleFactor: 1
     property color accentColor: "#d37918"
+    property Component videoBackdropContent
     property bool lightTheme: false
     property var shortcuts: []
     property var values: ({})
@@ -36,7 +38,7 @@ C.Popup {
     padding: theme.dp(20)
     modal: true; focus: true
     closePolicy: C.Popup.NoAutoClose
-    background: Rectangle { color: theme.background; radius: theme.dp(12); border.color: theme.border }
+    background: RedesignDialogSurface { theme: root.theme; videoBackdropContent: root.videoBackdropContent }
     onAboutToShow: { recordingName = ""; search.clear(); filter.currentIndex = 0 }
     onOpened: if (!recordingName.length) search.forceActiveFocus()
 

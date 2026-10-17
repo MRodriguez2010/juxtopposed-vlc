@@ -5,9 +5,11 @@ import QtQuick.Controls.Basic as C
 
 C.Dialog {
     id: root
+    popupType: C.Popup.Item
     property real scaleFactor: 1
     property bool lightTheme: false
     property color accentColor: "#d37918"
+    property Component videoBackdropContent
     property var playlistModel
     property int itemCount: 0
     property bool busy: false
@@ -25,7 +27,7 @@ C.Dialog {
     padding: 0
     modal: true; dim: true; focus: true
     closePolicy: busy ? C.Popup.NoAutoClose : C.Popup.CloseOnEscape
-    background: Rectangle { color: root.theme.background; radius: root.theme.dp(12) }
+    background: RedesignDialogSurface { theme: root.theme; videoBackdropContent: root.videoBackdropContent }
     C.Overlay.modal: Rectangle { color: "#80000000" }
     function begin(count) {
         if (visible) return false
@@ -51,7 +53,7 @@ C.Dialog {
     header: Item {
         implicitHeight: root.theme.dp(50)
         Rectangle {
-            anchors.fill: parent; radius: root.theme.dp(12); color: root.theme.field
+            anchors.fill: parent; radius: root.theme.dp(14); color: root.theme.field
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: parent.height / 2; color: parent.color }
         }
         Text {

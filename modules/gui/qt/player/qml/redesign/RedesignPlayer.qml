@@ -53,39 +53,9 @@ FocusScope {
         onWheelLeftRight: steps => adjust(steps)
     }
     RedesignSleepTimer { id: sleepTimer; onTriggered: MainPlaylistController.pause() }
-    component SurfaceBackdrop: Item {
-        id: surfaceBackdrop
-        property Item sourceItem: view.backdropSource
-        property real blurRadius: 25 * view.scaleFactor
-        property real cornerRadius: 10 * view.scaleFactor
-        property bool menuShadow: false
-        Widgets.RoundedRectangleShadow {
-            anchors.alignWhenCentered: false
-            visible: surfaceBackdrop.menuShadow && GraphicsInfo.shaderType === GraphicsInfo.RhiShader
-            blurRadius: 7.5 * view.scaleFactor
-            yOffset: 8 * view.scaleFactor
-            radius: Math.max(0, Math.min(surfaceBackdrop.cornerRadius,
-                                         surfaceBackdrop.width / 2, surfaceBackdrop.height / 2))
-            color: Qt.rgba(0, 0, 0, 0.46)
-            exclusionRect: Qt.rect(blurRadius * compensationFactor,
-                                   blurRadius * compensationFactor - yOffset,
-                                   surfaceBackdrop.width, surfaceBackdrop.height)
-            exclusionRadius: radius
-        }
-        VideoBackdrop {
-            visible: MainCtx.backdropBlurEnabled
-            anchors.fill: parent
-            videoSurfaceProvider: MainCtx.videoSurfaceProvider
-            blurRadius: surfaceBackdrop.blurRadius
-            cornerRadius: surfaceBackdrop.cornerRadius
-        }
-        Widgets.BackdropBlur {
-            visible: MainCtx.backdropBlurEnabled
-            anchors.fill: parent
-            sourceItem: surfaceBackdrop.sourceItem
-            radius: surfaceBackdrop.blurRadius
-            cornerRadius: surfaceBackdrop.cornerRadius
-        }
+    component SurfaceBackdrop: RedesignSurfaceBackdrop {
+        sourceItem: view.backdropSource
+        scaleFactor: view.scaleFactor
     }
     // Menus and track popovers are outside view's visual tree. Include the
     // player panels below them without including the menu in its own capture.
@@ -363,6 +333,7 @@ FocusScope {
     }
     RedesignShortcuts {
         id: shortcutEditor
+        videoBackdropContent: rootPlayer.menuBackdropContent
         parent: view
         scaleFactor: view.scaleFactor; lightTheme: view.lightTheme; accentColor: view.accentColor
         onSaved: playerPreferences.discard()

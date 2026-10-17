@@ -548,6 +548,7 @@ RedesignLibraryView {
     }
     RedesignPlaylistDialog {
         id: createPlaylist
+        videoBackdropContent: root.videoBackdropContent
         parent: C.Overlay.overlay
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         onFilesRequested: addFiles(DialogsProvider.selectPlaylistFiles())

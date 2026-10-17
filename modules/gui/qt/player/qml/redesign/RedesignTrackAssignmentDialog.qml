@@ -5,9 +5,11 @@ import QtQuick.Controls.Basic as C
 
 C.Dialog {
     id: root
+    popupType: C.Popup.Item
     property real scaleFactor: 1
     property bool lightTheme: false
     property color accentColor: "#d37918"
+    property Component videoBackdropContent
     readonly property RedesignTheme theme: RedesignTheme { scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor }
     property bool subtitles: true
     property var context: ({})
@@ -105,7 +107,11 @@ C.Dialog {
     height: Math.min(theme.dp(800), parent ? parent.height - theme.dp(32) : theme.dp(800))
     padding: 0; modal: true; dim: true; focus: true
     closePolicy: saving && !cancelableSave ? C.Popup.NoAutoClose : C.Popup.CloseOnEscape
-    background: Rectangle { color: root.theme.floatingPanel; radius: root.theme.dp(14) }
+    background: RedesignDialogSurface {
+        theme: root.theme
+        fill: root.theme.lightTheme ? root.theme.panel : "#0e0e0e"
+        videoBackdropContent: root.videoBackdropContent
+    }
     C.Overlay.modal: Rectangle { color: "#80000000" }
 
     function fileName(url) {

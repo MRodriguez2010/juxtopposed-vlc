@@ -48,6 +48,13 @@ Window {
     RedesignShortcuts {
         id: shortcuts
         parent: content
+        videoBackdropContent: Component {
+            RedesignSurfaceBackdrop {
+                sourceItem: content
+                scaleFactor: root.scaleFactor
+                nativeVideo: false
+            }
+        }
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         onSaved: preferenceStore.discard()
     }

@@ -49,11 +49,20 @@ Item {
     RedesignPreferencesWindow { }
     RedesignOnboardingWindow { }
 
+    Component {
+        id: dialogBackdrop
+        RedesignSurfaceBackdrop {
+            sourceItem: g_mainInterface
+            scaleFactor: VLCStyle.scale
+        }
+    }
+
     Loader {
         id: networkStreams
         anchors.fill: parent
         active: MainCtx.mediaLibraryAvailable
         source: active ? "qrc:///qt/qml/VLC/Player/RedesignNetworkStreams.qml" : ""
+        onLoaded: item.videoBackdropContent = dialogBackdrop
     }
     Connections {
         target: DialogsProvider
@@ -66,12 +75,14 @@ Item {
         anchors.fill: parent
         active: MainCtx.mediaLibraryAvailable
         source: active ? "qrc:///qt/qml/VLC/Player/RedesignAddToPlaylist.qml" : ""
+        onLoaded: item.videoBackdropContent = dialogBackdrop
     }
     Loader {
         id: trackAssignments
         anchors.fill: parent
         active: MainCtx.mediaLibraryAvailable
         source: active ? "qrc:///qt/qml/VLC/Player/RedesignTrackAssignments.qml" : ""
+        onLoaded: item.videoBackdropContent = dialogBackdrop
     }
 
     property bool _extendedFrameVisible: MainCtx.windowSuportExtendedFrame
