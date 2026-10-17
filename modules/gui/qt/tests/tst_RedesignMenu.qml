@@ -9,6 +9,16 @@ TestCase {
     width: 1280; height: 900
     visible: true
     when: windowShown
+    property int activeBackdrops: 0
+    Component {
+        id: backdropProbe
+        Item {
+            objectName: "menuBackdropProbe"
+            property real cornerRadius: 0
+            Component.onCompleted: testCase.activeBackdrops++
+            Component.onDestruction: testCase.activeBackdrops--
+        }
+    }
     ListModel { id: recentFiles }
     RedesignMenu {
         id: menu
@@ -37,6 +47,7 @@ TestCase {
         menu.recentFilesEnabled = true
         menu.recentFilesAvailable = true
         menu.selectedProfile = "movies"
+        menu.videoBackdropContent = null
         recentFiles.clear()
         recentFiles.append({id: 42, url: "/videos/cat.mkv"})
         recentFiles.append({id: 43, url: "/videos/second.mkv"})
@@ -79,6 +90,35 @@ TestCase {
         compare(menu.itemAt(6).text, "Open Recent")
         compare(menu.itemAt(8).text, "Profile (Movies)")
         compare(menu.itemAt(9).text, "Keyboard Shortcuts")
+    }
+    function test_backdropsFollowMenuAndSubmenuLifetime() {
+        menu.videoBackdropContent = backdropProbe
+        tryCompare(testCase, "activeBackdrops", 1)
+        function verifyBackdrop(popup) {
+            const backdrop = findChild(popup.background, "menuBackdropProbe")
+            verify(backdrop !== null)
+            compare(backdrop.width, popup.background.width)
+            compare(backdrop.height, popup.background.height)
+            compare(backdrop.cornerRadius, popup.background.radius)
+            compare(popup.background.opacity, 1)
+            fuzzyCompare(popup.background.color.a, 0.95, 0.001)
+        }
+        verifyBackdrop(menu)
+        for (const index of [6, 8]) {
+            const submenu = openSubmenu(index)
+            tryCompare(testCase, "activeBackdrops", 2)
+            verifyBackdrop(submenu)
+            keyClick(Qt.Key_Escape)
+            tryCompare(testCase, "activeBackdrops", 1)
+        }
+        menu.scaleFactor = 1.5
+        compare(findChild(menu.background, "menuBackdropProbe").cornerRadius, 15)
+        menu.dismiss()
+        tryCompare(testCase, "activeBackdrops", 0)
+        menu.open()
+        tryCompare(testCase, "activeBackdrops", 1)
+        menu.dismiss()
+        tryCompare(testCase, "activeBackdrops", 0)
     }
     function test_keyboardActionAndDismissal() {
         keyClick(Qt.Key_Down)
@@ -161,6 +201,7 @@ TestCase {
         menu.lightTheme = true
         compare(menu.width, 562.5)
         compare(menu.itemAt(0).implicitHeight, 72)
-        compare(menu.background.color, menu.theme.background)
+        compare(menu.background.color, Qt.rgba(menu.theme.background.r, menu.theme.background.g,
+                                               menu.theme.background.b, 0.95))
     }
 }

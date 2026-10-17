@@ -9,6 +9,7 @@ C.Menu {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property var recentModel: null
     property bool recentFilesAvailable: true
     property bool recentFilesEnabled: true
@@ -37,11 +38,27 @@ C.Menu {
         open()
     }
     popupType: C.Popup.Item
-    background: Rectangle { color: root.lightTheme ? root.theme.background : "#191919"; opacity: 0.95; radius: root.theme.dp(10) }
+    background: MenuSurface { shown: root.visible }
     delegate: MenuRow { }
     onOpened: { currentIndex = 0; itemAt(0).forceActiveFocus() }
 
     function activate(action) { dismiss(); actionRequested(action) }
+
+    component MenuSurface: Rectangle {
+        id: surface
+        property bool shown: false
+        readonly property color fill: root.lightTheme ? root.theme.background : "#191919"
+        color: Qt.rgba(fill.r, fill.g, fill.b, 0.95)
+        radius: root.theme.dp(10)
+        Loader {
+            anchors.fill: parent
+            z: -1
+            active: surface.shown
+            sourceComponent: root.videoBackdropContent
+            onLoaded: if (item.cornerRadius !== undefined)
+                item.cornerRadius = Qt.binding(() => surface.radius)
+        }
+    }
 
     component MenuRow: C.MenuItem {
         id: row
@@ -106,7 +123,7 @@ C.Menu {
         width: root.theme.dp(375); padding: root.padding
         popupType: C.Popup.Item
         delegate: MenuRow { }
-        background: Rectangle { color: root.lightTheme ? root.theme.background : "#191919"; opacity: 0.95; radius: root.theme.dp(10) }
+        background: MenuSurface { shown: recentMenu.visible }
         Instantiator {
             model: root.recentFilesAvailable && root.recentFilesEnabled ? root.recentModel : null
             delegate: MenuRow {
@@ -141,7 +158,7 @@ C.Menu {
         width: root.theme.dp(300); padding: root.padding
         popupType: C.Popup.Item
         delegate: MenuRow { }
-        background: Rectangle { color: root.lightTheme ? root.theme.background : "#191919"; opacity: 0.95; radius: root.theme.dp(10) }
+        background: MenuSurface { shown: profileMenu.visible }
         Instantiator {
             model: [{id: "", name: qsTr("Default Preset")}].concat(root.profiles)
             delegate: MenuRow {

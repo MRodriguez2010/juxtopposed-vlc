@@ -11,6 +11,7 @@
 #include <QTest>
 #include <QtPlugin>
 #include <memory>
+#include <utility>
 #include "../plugins.hpp"
 #include "maininterface/videobackdrop.hpp"
 #include "util/seek_preview_image_provider.hpp"
@@ -21,6 +22,110 @@ class TestVideoBackdrop : public QObject
 {
     Q_OBJECT
 private slots:
+    void mainMenu_data()
+    {
+        QTest::addColumn<double>("scale");
+        QTest::newRow("normal") << 1.;
+        QTest::newRow("scaled") << 1.5;
+    }
+
+    void mainMenu()
+    {
+        QFETCH(double, scale);
+        VideoBackdropProvider provider;
+        QQmlEngine engine;
+        engine.rootContext()->setContextProperty("testBackdropProvider", &provider);
+        const QString sourceRoot = qEnvironmentVariable("VLC_TEST_SOURCE_ROOT", QStringLiteral(TOP_SRCDIR));
+        const auto path = QUrl::fromLocalFile(QDir(sourceRoot).filePath("modules/gui/qt/player/qml/redesign"));
+        QQmlComponent component(&engine);
+        component.setData(QStringLiteral(R"(
+import QtQuick
+import QtQuick.Window
+import BackdropTest 1.0
+import "%1" as Design
+Window {
+    visible: true; width: 1400; height: 1000
+    property bool backdropEnabled: true
+    function focusSubmenu(index) {
+        menu.currentIndex = index
+        menu.itemAt(index).forceActiveFocus()
+    }
+    Design.RedesignMenu {
+        id: menu
+        objectName: "menu"
+        x: 20; y: 20
+        profiles: [{id: "movies", name: "Movies"}]
+        videoBackdropContent: Component {
+            VideoBackdrop {
+                visible: backdropEnabled
+                videoSurfaceProvider: testBackdropProvider
+                blurRadius: 25 * menu.scaleFactor
+            }
+        }
+    }
+}
+)").arg(path.toString()).toUtf8(), QUrl("qrc:/menu-backdrop-test.qml"));
+        std::unique_ptr<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto *window = qobject_cast<QQuickWindow *>(root.get());
+        auto *menu = root->findChild<QObject *>("menu");
+        QVERIFY(window && menu);
+        menu->setProperty("scaleFactor", scale);
+        QSignalSpy frames(window, &QQuickWindow::frameSwapped);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        QTRY_VERIFY(!frames.isEmpty());
+        QCOMPARE(window->rendererInterface()->graphicsApi(), expectedApi);
+        QVERIFY(provider.backdropRegions().regions.isEmpty());
+        QTest::mouseMove(window, QPoint(1380, 980));
+        QVERIFY(QMetaObject::invokeMethod(menu, "open"));
+        QTRY_VERIFY(menu->property("opened").toBool());
+        auto matches = [&](const QList<QObject *> &popups) {
+            const auto state = provider.backdropRegions();
+            if (state.regions.size() != popups.size()) return false;
+            const qreal dpr = window->effectiveDevicePixelRatio();
+            for (auto *popup : popups)
+            {
+                auto *background = qvariant_cast<QQuickItem *>(popup->property("background"));
+                if (!background) return false;
+                const auto rect = background->mapRectToScene(QRectF(QPointF(), background->size()));
+                bool found = false;
+                for (const auto &region : state.regions)
+                    found |= QLineF(region.rect.topLeft(), rect.topLeft() * dpr).length() < 0.01
+                        && QLineF(region.rect.bottomRight(), rect.bottomRight() * dpr).length() < 0.01
+                        && qAbs(region.cornerRadius - 10 * scale * dpr) < 0.01
+                        && qAbs(region.blurRadius - 25 * scale * dpr) < 0.01;
+                if (!found) return false;
+            }
+            return true;
+        };
+        QTRY_VERIFY(matches({menu}));
+        for (const auto &entry : {std::make_pair(6, "redesignRecentMenu"),
+                                 std::make_pair(8, "redesignProfileMenu")})
+        {
+            QVERIFY(QMetaObject::invokeMethod(root.get(), "focusSubmenu", Q_ARG(QVariant, entry.first)));
+            QTest::keyClick(window, Qt::Key_Right);
+            auto *submenu = root->findChild<QObject *>(entry.second);
+            QVERIFY(submenu);
+            QTRY_VERIFY(submenu->property("opened").toBool());
+            QTRY_VERIFY(matches({menu, submenu}));
+            QTest::keyClick(window, Qt::Key_Escape);
+            QTRY_VERIFY(matches({menu}));
+        }
+        menu->setProperty("x", 50);
+        menu->setProperty("y", 50);
+        QTRY_VERIFY(matches({menu}));
+        root->setProperty("backdropEnabled", false);
+        QTRY_VERIFY(provider.backdropRegions().regions.isEmpty());
+        root->setProperty("backdropEnabled", true);
+        QTRY_VERIFY(matches({menu}));
+        QVERIFY(QMetaObject::invokeMethod(menu, "dismiss"));
+        QTRY_VERIFY(provider.backdropRegions().regions.isEmpty());
+        QVERIFY(QMetaObject::invokeMethod(menu, "open"));
+        QTRY_VERIFY(matches({menu}));
+        root.reset();
+        QVERIFY(provider.backdropRegions().regions.isEmpty());
+    }
+
     void seekPreview_data()
     {
         QTest::addColumn<double>("scale");
