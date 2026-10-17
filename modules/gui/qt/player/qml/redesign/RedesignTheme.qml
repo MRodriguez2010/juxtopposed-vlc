@@ -8,7 +8,7 @@ QtObject {
     // Standalone previews use the design default; the app supplies a live preference.
     readonly property bool transparencyEnabled: typeof redesignAppearance === "undefined" || !redesignAppearance
         ? true : redesignAppearance.backdropBlurEnabled
-    readonly property real floatingOpacity: transparencyEnabled ? 0.95 : 1
+    readonly property real floatingOpacity: transparencyEnabled ? 0.90 : 1
     readonly property color background: lightTheme ? "#acacac" : "#1b1b1b"
     readonly property color panel: lightTheme ? "#c3c3c3" : "#0f0f0f"
     readonly property color floatingPanel: lightTheme ? Qt.rgba(195 / 255, 195 / 255, 195 / 255, floatingOpacity) : Qt.rgba(14 / 255, 14 / 255, 14 / 255, floatingOpacity)

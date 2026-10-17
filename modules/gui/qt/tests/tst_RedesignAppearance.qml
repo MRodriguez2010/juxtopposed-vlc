@@ -30,7 +30,7 @@ TestCase {
         for (const enabled of [true, false, true]) {
             redesignAppearance.backdropBlurEnabled = enabled
             for (const surface of surfaces)
-                fuzzyCompare(surface.color.a, enabled ? 0.95 : 1, 0.001)
+                fuzzyCompare(surface.color.a, enabled ? 0.90 : 1, 0.001)
             compare(panel.mapToItem(player, 0, 0), geometry)
         }
     }

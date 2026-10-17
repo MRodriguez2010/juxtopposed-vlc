@@ -51,7 +51,7 @@ TestCase {
             verify(parent !== testCase, "The Settings card must not be captured into its own backdrop.")
         for (const enabled of [true, false, true]) {
             redesignAppearance.backdropBlurEnabled = enabled
-            fuzzyCompare(surface.color.a, enabled ? 0.95 : 1, 0.001)
+            fuzzyCompare(surface.color.a, enabled ? 0.90 : 1, 0.001)
             compare(Qt.rgba(surface.color.r, surface.color.g, surface.color.b, 1), "#0e0e0e")
         }
         dialog.lightTheme = true

@@ -58,7 +58,7 @@ TestCase {
             verify(parent !== testCase, "Dialog surfaces must stay outside the captured interface.")
         for (const enabled of [true, false, true]) {
             redesignAppearance.backdropBlurEnabled = enabled
-            fuzzyCompare(surface.color.a, enabled ? 0.95 : 1, 0.001)
+            fuzzyCompare(surface.color.a, enabled ? 0.90 : 1, 0.001)
         }
         dialog.scaleFactor = 1.5
         compare(surface.radius, 21); compare(backdrop.cornerRadius, 21)

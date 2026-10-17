@@ -103,7 +103,7 @@ TestCase {
             compare(backdrop.cornerRadius, popup.background.radius)
             compare(backdrop.menuShadow, true)
             compare(popup.background.opacity, 1)
-            fuzzyCompare(popup.background.color.a, 0.95, 0.001)
+            fuzzyCompare(popup.background.color.a, 0.90, 0.001)
         }
         verifyBackdrop(menu)
         for (const index of [6, 8]) {
@@ -204,6 +204,6 @@ TestCase {
         compare(menu.width, 562.5)
         compare(menu.itemAt(0).implicitHeight, 72)
         compare(menu.background.color, Qt.rgba(menu.theme.background.r, menu.theme.background.g,
-                                               menu.theme.background.b, 0.95))
+                                               menu.theme.background.b, 0.90))
     }
 }
