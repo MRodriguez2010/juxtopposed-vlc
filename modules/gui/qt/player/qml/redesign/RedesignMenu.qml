@@ -48,7 +48,7 @@ C.Menu {
         id: surface
         property bool shown: false
         readonly property color fill: root.lightTheme ? root.theme.background : "#191919"
-        color: Qt.rgba(fill.r, fill.g, fill.b, 0.95)
+        color: Qt.rgba(fill.r, fill.g, fill.b, root.theme.floatingOpacity)
         radius: root.theme.dp(10)
         Loader {
             anchors.fill: parent

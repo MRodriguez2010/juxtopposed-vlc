@@ -488,7 +488,7 @@ C.Dialog {
         Rectangle {
             anchors.fill: parent; anchors.margins: root.theme.dp(12); z: 4
             visible: fileDrop.containsDrag
-            color: Qt.alpha(root.theme.field, 0.95); radius: root.theme.dp(8)
+            color: Qt.alpha(root.theme.field, root.theme.floatingOpacity); radius: root.theme.dp(8)
             border.color: root.theme.accent; border.width: root.theme.dp(2)
             Text {
                 anchors.centerIn: parent; width: parent.width - root.theme.dp(40); wrapMode: Text.WordWrap

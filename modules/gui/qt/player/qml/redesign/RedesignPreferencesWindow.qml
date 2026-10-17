@@ -260,9 +260,18 @@ Window {
                             }
                         }
                     }
+                    Repeater {
+                        model: specification.sections.general.find(section => section.appearance).rows
+                        delegate: RedesignPreferenceRow {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            backend: preferenceStore; optionName: modelData[0]; label: modelData[1]
+                            scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+                        }
+                    }
                 }
                 Repeater {
-                    model: root.search.length ? [] : specification.sections[root.category] || []
+                    model: root.search.length ? [] : (specification.sections[root.category] || []).filter(section => !section.appearance)
                     delegate: Column {
                         required property var modelData
                         required property int index

@@ -530,6 +530,11 @@ TestCase {
         verify(!field.invalid); compare(field.text, "1.8"); compare(store.value("timeout"), 1800)
     }
     function test_simpleAndAdvancedHaveDifferentContents() {
+        const appearance = catalog.sections.general.find(section => section.appearance)
+        compare(appearance.title, "Appearance")
+        verify(appearance.rows.some(row => row[0] === "qt-backdrop-blur" && row[1] === "Transparency and blur"))
+        compare(catalog.find("transparency")[0].name, "qt-backdrop-blur")
+        compare(catalog.find("blur")[0].name, "qt-backdrop-blur")
         const basicGeneral = catalog.sections.general.reduce((names, section) => names.concat(section.rows.map(row => row[0])), [])
         const advancedGeneral = catalog.advancedSections.general.reduce((names, section) => names.concat(section.rows.map(row => row[0])), [])
         verify(!basicGeneral.includes("stats"))

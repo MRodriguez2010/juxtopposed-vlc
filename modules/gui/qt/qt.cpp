@@ -289,9 +289,9 @@ static void ShowDialog   ( intf_thread_t *, int, int, intf_dialog_args_t * );
 #define HIDE_WINDOW_ON_CLOSE_TEXT N_( "Hide the window on close" )
 #define HIDE_WINDOW_ON_CLOSE_LONGTEXT N_( "Instead of closing the application, hide the window. This setting is only applicable when system tray icon is enabled." )
 
-#define BACKDROP_BLUR_FILTER_TEXT N_( "Enable backdrop blur filter for the main window if possible" )
-#define BACKDROP_BLUR_FILTER_LONGTEXT N_( "If backdrop blur filter is available, use translucency in the backgrounds of certain parts of the user interface " \
-    "instead of a solid color. This setting impairs readibility of text." )
+#define BACKDROP_BLUR_FILTER_TEXT N_( "Transparency and blur" )
+#define BACKDROP_BLUR_FILTER_LONGTEXT N_( "Use transparent panels and menus with a blurred background. " \
+    "Turn this off to use solid backgrounds." )
 
 #define PIP_MODE_TEXT N_( "Enable picture-in-picture (PiP) mode" )
 #define PIP_MODE_LONGTEXT N_( "Picture-in-picture mode allows playing video contained in a smaller area so that the interface remains usable." )

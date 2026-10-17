@@ -174,6 +174,7 @@ bool MainUI::setup(QQmlEngine* engine)
         new EffectsImageProvider(engine);
     engine->addImageProvider(QStringLiteral("svgcolor"), new SVGColorImageImageProvider());
     engine->rootContext()->setContextProperty(QStringLiteral("redesignSvgImages"), true);
+    engine->rootContext()->setContextProperty(QStringLiteral("redesignAppearance"), m_mainCtx);
     engine->addImageProvider(QStringLiteral("vlcaccess"), new VLCAccessImageProvider());
     engine->addImageProvider(QStringLiteral("seekpreview"), new SeekPreviewImageProvider());
 

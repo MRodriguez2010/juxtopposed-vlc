@@ -255,7 +255,7 @@ T.Slider {
         y: -height - root.theme.dp(12)
         background: Rectangle {
             radius: root.theme.dp(14)
-            color: root.lightTheme ? Qt.rgba(root.theme.panel.r, root.theme.panel.g, root.theme.panel.b, 0.95) : Qt.rgba(25 / 255, 25 / 255, 25 / 255, 0.95)
+            color: root.lightTheme ? Qt.rgba(root.theme.panel.r, root.theme.panel.g, root.theme.panel.b, root.theme.floatingOpacity) : Qt.rgba(25 / 255, 25 / 255, 25 / 255, root.theme.floatingOpacity)
             Loader {
                 anchors.fill: parent
                 z: -1

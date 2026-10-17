@@ -140,7 +140,7 @@ FocusScope {
                 id: surfaceBackdrop
                 property real blurRadius: 25 * view.scaleFactor
                 property real cornerRadius: 10 * view.scaleFactor
-                visible: MainCtx.backdropBlurRequested()
+                visible: MainCtx.backdropBlurEnabled
                 VideoBackdrop {
                     anchors.fill: parent
                     videoSurfaceProvider: MainCtx.videoSurfaceProvider

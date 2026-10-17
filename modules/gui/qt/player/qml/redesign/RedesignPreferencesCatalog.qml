@@ -14,6 +14,8 @@ QtObject {
     // screens. Unsupported options are omitted by the native metadata adapter.
     readonly property var sections: ({
         general: [
+            { title: qsTr("Appearance"), appearance: true, rows: [
+                ["qt-backdrop-blur", qsTr("Transparency and blur")] ] },
             { title: qsTr("Startup"), rows: [
                 ["qt-error-dialogs", qsTr("Show confirmation and error dialogs")],
                 ["qt-updates-notif", qsTr("Check for updates automatically")] ] },

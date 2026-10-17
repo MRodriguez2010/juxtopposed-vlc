@@ -27,7 +27,7 @@ Item {
 
     property real uiTransluency: (enabled && MainCtx.intfMainWindow.active) ? 1 : 0
 
-    enabled: MainCtx.hasAcrylicSurface
+    enabled: MainCtx.hasAcrylicSurface && MainCtx.backdropBlurEnabled
 
     Behavior on uiTransluency {
         NumberAnimation {

@@ -69,7 +69,7 @@ Dialog {
             anchors.fill: parent
             anchors.margins: MainCtx.windowExtendedMargin
 
-            visible: MainCtx.backdropBlurRequested() && blur.available
+            visible: MainCtx.backdropBlurEnabled && blur.available
 
             mode: Widgets.DualKawaseBlur.Mode.SixPass
 

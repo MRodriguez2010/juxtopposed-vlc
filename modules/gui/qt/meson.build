@@ -1066,6 +1066,7 @@ qml_tests = {
     'tst_FSM': files('tests/tst_FSM.qml'),
     'tst_Redesign': files('tests/tst_Redesign.qml'),
     'tst_RedesignTheme': files('tests/tst_RedesignTheme.qml'),
+    'tst_RedesignAppearance': files('tests/tst_RedesignAppearance.qml'),
     'tst_RedesignLibrary': files('tests/tst_RedesignLibrary.qml'),
     'tst_RedesignQueue': files('tests/tst_RedesignQueue.qml'),
     'tst_RedesignBookmarks': files('tests/tst_RedesignBookmarks.qml'),

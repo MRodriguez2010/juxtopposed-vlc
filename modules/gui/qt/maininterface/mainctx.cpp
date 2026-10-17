@@ -458,6 +458,8 @@ void MainCtx::loadPrefs(const bool callSignals)
             signal(this);
     };
 
+    loadFromVLCOption(m_backdropBlurEnabled, "qt-backdrop-blur", &MainCtx::backdropBlurEnabledChanged);
+
     bool minimalMode = false;
     /* Are we in the enhanced always-video mode or not ? */
     loadFromVLCOption(minimalMode, "qt-minimal-view", nullptr);

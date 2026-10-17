@@ -114,6 +114,7 @@ class MainCtx : public QObject
     Q_PROPERTY(Grouping grouping READ grouping WRITE setGrouping NOTIFY groupingChanged FINAL)
     Q_PROPERTY(QVariantMap redesignPlayerPreferences READ redesignPlayerPreferences NOTIFY redesignPlayerPreferencesChanged FINAL)
     Q_PROPERTY(QColor redesignAccent READ redesignAccent NOTIFY redesignAccentChanged FINAL)
+    Q_PROPERTY(bool backdropBlurEnabled READ backdropBlurRequested NOTIFY backdropBlurEnabledChanged FINAL)
     Q_PROPERTY(ColorSchemeModel* colorScheme READ getColorScheme CONSTANT FINAL)
     Q_PROPERTY(bool hasVLM READ hasVLM CONSTANT FINAL)
     Q_PROPERTY(bool clientSideDecoration READ useClientSideDecoration NOTIFY useClientSideDecorationChanged FINAL)
@@ -286,7 +287,7 @@ public:
 
     bool usingTouch() const { return m_usingTouch; }
 
-    Q_INVOKABLE bool backdropBlurRequested() const { return var_InheritBool(p_intf, "qt-backdrop-blur"); }
+    Q_INVOKABLE bool backdropBlurRequested() const { return m_backdropBlurEnabled; }
 
     Q_INVOKABLE static inline void setCursor(Qt::CursorShape cursor) { QApplication::setOverrideCursor(QCursor(cursor)); }
     Q_INVOKABLE static inline void restoreCursor(void) { QApplication::restoreOverrideCursor(); }
@@ -457,6 +458,7 @@ protected:
     bool                 m_hasGridListMode = false;
     Grouping             m_grouping = GROUPING_NONE;
     QColor m_redesignAccent = QColor(QStringLiteral("#d37918"));
+    bool m_backdropBlurEnabled = true;
     ColorSchemeModel*    m_colorScheme = nullptr;
     bool                 m_windowTitlebar = true;
     // NOTE: Ideally this should be a QVLCBool.
@@ -582,6 +584,7 @@ signals:
     void lyricsModeChanged( bool );
     void colorSchemeChanged( QString );
     void redesignAccentChanged();
+    void backdropBlurEnabledChanged();
     void redesignPlayerPreferencesChanged();
     void useClientSideDecorationChanged();
     void hasToolbarMenuChanged();

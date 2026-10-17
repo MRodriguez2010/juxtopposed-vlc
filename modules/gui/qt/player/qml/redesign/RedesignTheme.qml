@@ -5,9 +5,13 @@ QtObject {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    // Standalone previews use the design default; the app supplies a live preference.
+    readonly property bool transparencyEnabled: typeof redesignAppearance === "undefined" || !redesignAppearance
+        ? true : redesignAppearance.backdropBlurEnabled
+    readonly property real floatingOpacity: transparencyEnabled ? 0.95 : 1
     readonly property color background: lightTheme ? "#acacac" : "#1b1b1b"
     readonly property color panel: lightTheme ? "#c3c3c3" : "#0f0f0f"
-    readonly property color floatingPanel: lightTheme ? Qt.rgba(195 / 255, 195 / 255, 195 / 255, 0.95) : Qt.rgba(14 / 255, 14 / 255, 14 / 255, 0.95)
+    readonly property color floatingPanel: lightTheme ? Qt.rgba(195 / 255, 195 / 255, 195 / 255, floatingOpacity) : Qt.rgba(14 / 255, 14 / 255, 14 / 255, floatingOpacity)
     readonly property color field: lightTheme ? "#dedede" : "#090909"
     readonly property color border: lightTheme ? "#969696" : "#292929"
     readonly property color foreground: lightTheme ? "#404040" : "#8f8f8f"
