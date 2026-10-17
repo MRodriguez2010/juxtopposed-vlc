@@ -46,7 +46,7 @@ C.Pane {
                 anchors.fill: parent; anchors.leftMargin: theme.dp(14); anchors.rightMargin: theme.dp(14)
                 spacing: theme.dp(14)
                 Repeater {
-                    model: [{key: "playback", icon: "play", label: qsTr("Playback")}, {key: "video", icon: "video", label: qsTr("Video")}, {key: "audio", icon: "audio", label: qsTr("Audio")}, {key: "subtitles", icon: "subtitles", label: qsTr("Subtitles")}]
+                    model: [{key: "playback", icon: "playback-selected-two-tone", label: qsTr("Playback")}, {key: "video", icon: "video-two-tone", label: qsTr("Video")}, {key: "audio", icon: "audio-two-tone", label: qsTr("Audio")}, {key: "subtitles", icon: "subtitles-two-tone", label: qsTr("Subtitles")}]
                     RedesignButton {
                         required property var modelData
                         Layout.fillWidth: true
@@ -54,8 +54,10 @@ C.Pane {
                         Layout.fillHeight: true
                         captionFontSize: 12; iconSize: theme.dp(16)
                         selectedForeground: theme.foreground
+                        selectedIconForeground: modelData.key === "video" ? theme.accent : theme.foreground
+                        iconDetailColor: modelData.key === "video" ? theme.foreground : theme.menuAccent
                         background: Rectangle { color: parent.hovered ? theme.hover : "transparent"; border.width: parent.visualFocus ? 1 : 0; border.color: theme.accent }
-                        iconName: modelData.icon; text: modelData.label
+                        iconName: selected ? modelData.icon : "nav-" + modelData.key; text: modelData.label
                         caption: root.width > theme.dp(360) ? modelData.label : ""
                         selected: root.page === modelData.key
                         onClicked: root.pageRequested(modelData.key)

@@ -15,6 +15,7 @@ T.Button {
     property bool selected: false
     property color foreground: theme.foreground
     property color selectedForeground: theme.accent
+    property color selectedIconForeground: theme.accent
     property real iconSize: theme.dp(24)
     property real iconReveal: 0
     property var iconDetailColor
@@ -58,7 +59,7 @@ T.Button {
             anchors.verticalCenter: parent.verticalCenter
             name: root.iconName
             sidebarReveal: root.iconReveal
-            color: root.iconName === "cone" ? theme.accent : root.accent ? "#161616" : root.selected ? theme.accent : root.hovered || root.visualFocus ? theme.bright : root.foreground
+            color: root.iconName === "cone" ? theme.accent : root.accent ? "#161616" : root.selected ? root.selectedIconForeground : root.hovered || root.visualFocus ? theme.bright : root.foreground
             detailColor: root.iconDetailColor === undefined ? color : root.iconDetailColor
             opacity: root.enabled ? 1 : 0.35
         }
