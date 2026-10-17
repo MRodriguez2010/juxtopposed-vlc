@@ -214,8 +214,7 @@ sampler_yuv_base_init(struct vlc_gl_sampler *sampler,
 {
     struct sampler_priv *priv = PRIV(sampler);
 
-    /* The current implementation always converts from limited to full range. */
-    const video_color_range_t range = COLOR_RANGE_LIMITED;
+    const video_color_range_t range = sampler->fmt_in.color_range;
     float *matrix = priv->conv_matrix;
     init_conv_matrix(matrix, yuv_space, range);
 

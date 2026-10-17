@@ -61,11 +61,12 @@ struct test_point
     const uint8_t *color;
 };
 
-static void test_opengl_offscreen(
+static void test_opengl_offscreen_format(
         vlc_object_t *root,
         video_orientation_t orientation,
         struct test_point *points,
-        size_t points_count
+        size_t points_count,
+        vlc_fourcc_t chroma, video_color_range_t range, uint8_t luma
 ){
     struct vlc_decoder_device *device =
         vlc_decoder_device_Create(root, NULL);
@@ -100,8 +101,9 @@ static void test_opengl_offscreen(
     GL_ASSERT_NOERROR(&api.vt);
 
     video_format_t fmt;
-    video_format_Init(&fmt, VLC_CODEC_RGBA);
-    video_format_Setup(&fmt, VLC_CODEC_RGBA, 3, 3, 3, 3, 1, 1);
+    video_format_Init(&fmt, chroma);
+    video_format_Setup(&fmt, chroma, 3, 3, 3, 3, 1, 1);
+    fmt.color_range = range;
     fmt.primaries = COLOR_PRIMARIES_UNDEF;
     fmt.space = COLOR_SPACE_UNDEF;
     fmt.transfer = TRANSFER_FUNC_UNDEF;
@@ -160,12 +162,22 @@ static void test_opengl_offscreen(
     picture_t *picture = picture_NewFromFormat(&fmt);
     assert(picture != NULL);
 
-    size_t size = picture->p[0].i_lines * picture->p[0].i_pitch / picture->p[0].i_pixel_pitch;
-    for (size_t i=0; i < size; ++i)
-        memcpy(&picture->p[0].p_pixels[i * 4], green, sizeof(green));
+    if (chroma == VLC_CODEC_RGBA)
+    {
+        size_t size = picture->p[0].i_lines * picture->p[0].i_pitch / picture->p[0].i_pixel_pitch;
+        for (size_t i=0; i < size; ++i)
+            memcpy(&picture->p[0].p_pixels[i * 4], green, sizeof(green));
 
-    memcpy(&picture->p[0].p_pixels[0 * 4], red, sizeof(red));
-    memcpy(&picture->p[0].p_pixels[2 * 4], blue, sizeof(blue));
+        memcpy(&picture->p[0].p_pixels[0 * 4], red, sizeof(red));
+        memcpy(&picture->p[0].p_pixels[2 * 4], blue, sizeof(blue));
+    }
+    else
+    {
+        assert(picture->i_planes == 3);
+        for (int i = 0; i < picture->i_planes; ++i)
+            memset(picture->p[i].p_pixels, i == 0 ? luma : 128,
+                   picture->p[i].i_pitch * picture->p[i].i_lines);
+    }
 
     ret = vlc_gl_filters_UpdatePicture(filters, picture);
     assert(ret == VLC_SUCCESS);
@@ -204,7 +216,11 @@ static void test_opengl_offscreen(
         api.vt.ReadPixels(points[i].x, points[i].y, 1, 1, GL_RGBA,
                           GL_UNSIGNED_BYTE, &pixel);
         GL_ASSERT_NOERROR(&api.vt);
-        assert(memcmp(pixel, points[i].color, sizeof(pixel)) == 0);
+        if (chroma == VLC_CODEC_RGBA)
+            assert(memcmp(pixel, points[i].color, sizeof(pixel)) == 0);
+        else
+            for (size_t channel = 0; channel < ARRAY_SIZE(pixel); ++channel)
+                assert(abs((int)pixel[channel] - points[i].color[channel]) <= 1);
     }
 
     vlc_gl_filters_Delete(filters);
@@ -217,6 +233,36 @@ static void test_opengl_offscreen(
     vlc_gl_Delete(gl);
 
     picture_Release(picture);
+}
+
+static void test_opengl_offscreen(vlc_object_t *root,
+                                 video_orientation_t orientation,
+                                 struct test_point *points, size_t count)
+{
+    test_opengl_offscreen_format(root, orientation, points, count,
+                                VLC_CODEC_RGBA, COLOR_RANGE_UNDEF, 0);
+}
+
+static void test_yuv_ranges(vlc_object_t *root)
+{
+    const vlc_fourcc_t chromas[] = { VLC_CODEC_I420, VLC_CODEC_I422 };
+    const struct { uint8_t full, limited, rgb; } levels[] = {
+        {0, 16, 0}, {42, 52, 42}, {255, 235, 255},
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(chromas); ++i)
+        for (unsigned limited = 0; limited < 2; ++limited)
+            for (size_t level = 0; level < ARRAY_SIZE(levels); ++level)
+            {
+                const uint8_t expected[] = {
+                    levels[level].rgb, levels[level].rgb, levels[level].rgb, 255,
+                };
+                struct test_point point = {1, 1, expected};
+                fprintf(stderr, "YUV range: %.4s %s, expected gray %u\n",
+                        (const char *)&chromas[i], limited ? "limited" : "full", levels[level].rgb);
+                test_opengl_offscreen_format(root, ORIENT_NORMAL, &point, 1,
+                    chromas[i], limited ? COLOR_RANGE_LIMITED : COLOR_RANGE_FULL,
+                    limited ? levels[level].limited : levels[level].full);
+            }
 }
 
 int main( int argc, char **argv )
@@ -331,6 +377,8 @@ int main( int argc, char **argv )
                           points_antitransposed, ARRAY_SIZE(points_antitransposed));
 
 
+
+    test_yuv_ranges(root);
 
     libvlc_release(vlc);
     return 0;
