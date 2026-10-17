@@ -53,6 +53,28 @@ FocusScope {
         onWheelLeftRight: steps => adjust(steps)
     }
     RedesignSleepTimer { id: sleepTimer; onTriggered: MainPlaylistController.pause() }
+    component SurfaceBackdrop: Item {
+        id: surfaceBackdrop
+        property Item sourceItem: view.backdropSource
+        property real blurRadius: 25 * view.scaleFactor
+        property real cornerRadius: 10 * view.scaleFactor
+        visible: MainCtx.backdropBlurEnabled
+        VideoBackdrop {
+            anchors.fill: parent
+            videoSurfaceProvider: MainCtx.videoSurfaceProvider
+            blurRadius: surfaceBackdrop.blurRadius
+            cornerRadius: surfaceBackdrop.cornerRadius
+        }
+        Widgets.BackdropBlur {
+            anchors.fill: parent
+            sourceItem: surfaceBackdrop.sourceItem
+            radius: surfaceBackdrop.blurRadius
+            cornerRadius: surfaceBackdrop.cornerRadius
+        }
+    }
+    // Menus and track popovers are outside view's visual tree. Include the
+    // player panels below them without including the menu in its own capture.
+    property Component menuBackdropContent: Component { SurfaceBackdrop { sourceItem: view } }
     RedesignPreferences { id: playerPreferences; ctx: MainCtx; autoSave: true; editPlayerPreset: true }
     Shortcut {
         sequences: ["Menu", "Shift+F10"]
@@ -135,26 +157,7 @@ FocusScope {
         resumeAvailable: rootPlayer.resumeAvailable
         timeForPosition: value => rootPlayer.clockText(Player.length.scale(value))
         seekPreviewImage: Player.seekPreview
-        videoBackdropContent: Component {
-            Item {
-                id: surfaceBackdrop
-                property real blurRadius: 25 * view.scaleFactor
-                property real cornerRadius: 10 * view.scaleFactor
-                visible: MainCtx.backdropBlurEnabled
-                VideoBackdrop {
-                    anchors.fill: parent
-                    videoSurfaceProvider: MainCtx.videoSurfaceProvider
-                    blurRadius: surfaceBackdrop.blurRadius
-                    cornerRadius: surfaceBackdrop.cornerRadius
-                }
-                Widgets.BackdropBlur {
-                    anchors.fill: parent
-                    sourceItem: view.backdropSource
-                    radius: surfaceBackdrop.blurRadius
-                    cornerRadius: surfaceBackdrop.cornerRadius
-                }
-            }
-        }
+        videoBackdropContent: Component { SurfaceBackdrop { } }
         seekThumbnailContent: Component {
             Widgets.ImageExt {
                 objectName: "seekThumbnailImage"
@@ -248,10 +251,12 @@ FocusScope {
                     item.scaleFactor = Qt.binding(() => view.scaleFactor)
                     item.lightTheme = Qt.binding(() => view.lightTheme)
                     item.accentColor = Qt.binding(() => view.accentColor)
+                    item.videoBackdropContent = rootPlayer.menuBackdropContent
                     item.expanded = Qt.binding(() => view.libraryExpanded)
                     item.fullLibraryRequested.connect(() => { view.libraryExpanded = !view.libraryExpanded })
                 }
                 RedesignLibraryView {
+                    videoBackdropContent: rootPlayer.menuBackdropContent
                     anchors.fill: parent
                     visible: !MainCtx.mediaLibraryAvailable
                     expanded: view.libraryExpanded
@@ -266,11 +271,13 @@ FocusScope {
         }
         queueContent: Component {
             RedesignQueuePanel {
+                videoBackdropContent: rootPlayer.menuBackdropContent
                 tab: rootPlayer.queueTab
                 onTabChanged: rootPlayer.queueTab = tab
                 scaleFactor: view.scaleFactor; lightTheme: view.lightTheme; accentColor: view.accentColor
                 onCloseRequested: view.queueOpen = false
                 queueContent: Component { RedesignQueue {
+                videoBackdropContent: rootPlayer.menuBackdropContent
                 scaleFactor: view.scaleFactor; lightTheme: view.lightTheme; accentColor: view.accentColor
                 queueModel: PlaylistListModel { id: queueModel; playlist: MainPlaylistController.playlist }
                 itemCount: queueModel.count
@@ -315,7 +322,7 @@ FocusScope {
 
     RedesignTrackPopup {
         id: tracksPopup
-        videoBackdropContent: view.videoBackdropContent
+        videoBackdropContent: rootPlayer.menuBackdropContent
         parent: view
         placementArea: view
         scaleFactor: view.scaleFactor; lightTheme: view.lightTheme; accentColor: view.accentColor
@@ -348,7 +355,7 @@ FocusScope {
     RedesignMenu {
         id: mediaMenu
         parent: view
-        videoBackdropContent: view.videoBackdropContent
+        videoBackdropContent: rootPlayer.menuBackdropContent
         scaleFactor: view.scaleFactor; lightTheme: view.lightTheme; accentColor: view.accentColor
         recentModel: recentMenuModel.item
         recentFilesAvailable: MainCtx.mediaLibraryAvailable

@@ -8,6 +8,7 @@ C.Menu {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property var entries: []
     property string checkedAction: ""
     signal actionRequested(string action)
@@ -18,8 +19,18 @@ C.Menu {
     height: Math.min(implicitHeight, parent && parent.Window.window ? parent.Window.window.height - 2 * margins : implicitHeight)
     popupType: C.Popup.Item
     background: Rectangle {
-        color: root.lightTheme ? root.theme.background : "#191919"
+        id: surface
+        readonly property color fill: root.lightTheme ? root.theme.background : "#191919"
+        color: Qt.rgba(fill.r, fill.g, fill.b, root.theme.floatingOpacity)
         radius: root.theme.dp(10)
+        Loader {
+            anchors.fill: parent
+            z: -1
+            active: root.visible
+            sourceComponent: root.videoBackdropContent
+            onLoaded: if (item.cornerRadius !== undefined)
+                item.cornerRadius = Qt.binding(() => surface.radius)
+        }
     }
     Instantiator {
         model: root.entries

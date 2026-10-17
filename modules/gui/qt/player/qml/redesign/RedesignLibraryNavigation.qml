@@ -7,6 +7,7 @@ Rectangle {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property bool expanded: false
     property int category: 1
     property var pins: []
@@ -32,6 +33,7 @@ Rectangle {
     }
     RedesignActionMenu {
         id: pinMenu
+        videoBackdropContent: root.videoBackdropContent
         objectName: "libraryPinMenu"
         property var pin
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor

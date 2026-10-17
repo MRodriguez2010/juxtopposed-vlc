@@ -7,6 +7,7 @@ C.Control {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property bool boldCurrent: false
     property var entries: []
     signal activated(int index)
@@ -42,6 +43,7 @@ C.Control {
     onEntriesChanged: ancestors.close()
     RedesignActionMenu {
         id: ancestors
+        videoBackdropContent: root.videoBackdropContent
         objectName: "libraryAncestorMenu"
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         entries: root.entries.slice(0, root.firstVisible).map((entry, index) => ({action: index.toString(), label: entry.label}))

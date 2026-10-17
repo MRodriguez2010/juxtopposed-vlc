@@ -8,6 +8,7 @@ FocusScope {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property var bookmarkModel
     property bool canAdd: false
     property int selectedIndex: -1
@@ -53,6 +54,8 @@ FocusScope {
     }
     RedesignActionMenu {
         id: actions
+        videoBackdropContent: root.videoBackdropContent
+        objectName: "bookmarkActionsMenu"
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         entries: [{action: "rename", label: qsTr("Rename"), icon: "edit"},
                   {action: "remove", label: qsTr("Remove bookmark"), icon: "remove"}]

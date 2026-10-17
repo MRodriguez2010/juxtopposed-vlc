@@ -15,16 +15,17 @@ TestCase {
     RedesignPlayerView { id: player; anchors.fill: parent; settingsPage: "playback" }
     RedesignTrackPopup { id: tracks; parent: testCase; placementArea: testCase }
     RedesignMenu { id: menu; parent: testCase }
+    RedesignActionMenu { id: actions; parent: testCase }
     RedesignSeekBar { id: seek; x: 100; y: 650; width: 600 }
 
     function test_liveTransparency_data() {
         return [{tag: "dark", light: false}, {tag: "light", light: true}]
     }
     function test_liveTransparency(data) {
-        player.lightTheme = tracks.lightTheme = menu.lightTheme = seek.lightTheme = data.light
+        player.lightTheme = tracks.lightTheme = menu.lightTheme = actions.lightTheme = seek.lightTheme = data.light
         const panel = findChild(player, "redesignRightPanel")
         const preview = findChild(seek, "seekThumbnailPopup")
-        const surfaces = [panel, tracks.background, menu.background, preview.background]
+        const surfaces = [panel, tracks.background, menu.background, actions.background, preview.background]
         const geometry = panel.mapToItem(player, 0, 0)
         for (const enabled of [true, false, true]) {
             redesignAppearance.backdropBlurEnabled = enabled

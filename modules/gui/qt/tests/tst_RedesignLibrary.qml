@@ -9,6 +9,16 @@ TestCase {
     width: 427; height: 986
     visible: true
     when: windowShown
+    property int activeBackdrops: 0
+    Component {
+        id: backdropProbe
+        Item {
+            objectName: "contextBackdropProbe"
+            property real cornerRadius: 0
+            Component.onCompleted: testCase.activeBackdrops++
+            Component.onDestruction: testCase.activeBackdrops--
+        }
+    }
     RedesignLibraryView {
         id: library
         anchors.fill: parent
@@ -66,7 +76,34 @@ TestCase {
     SignalSpy { id: playlistEditSpy; target: library; signalName: "playlistEditRequested" }
     SignalSpy { id: playlistMoveSpy; target: library; signalName: "playlistMoveRequested" }
     SignalSpy { id: playlistRemoveSpy; target: library; signalName: "playlistRemoveRequested" }
+    function test_contextBackdropLifetime() {
+        library.videoBackdropContent = backdropProbe
+        for (const name of ["libraryItemMenu", "libraryMoreMenu", "libraryViewMenu"]) {
+            const menu = findChild(library, name)
+            compare(menu.videoBackdropContent, backdropProbe)
+            menu.open()
+            tryCompare(testCase, "activeBackdrops", 1)
+            const backdrop = findChild(menu.background, "contextBackdropProbe")
+            verify(backdrop !== null)
+            compare(backdrop.width, menu.background.width)
+            compare(backdrop.height, menu.background.height)
+            compare(backdrop.cornerRadius, 10)
+            for (let parent = menu.background; parent; parent = parent.parent)
+                verify(parent !== library, "The menu must stay outside its capture source.")
+            menu.close()
+            tryCompare(testCase, "activeBackdrops", 0)
+        }
+        compare(findChild(library, "libraryPinMenu").videoBackdropContent, backdropProbe)
+        compare(findChild(library, "libraryAncestorMenu").videoBackdropContent, backdropProbe)
+        library.openSortMenu(findChild(library, "librarySortButton"))
+        tryCompare(testCase, "activeBackdrops", 1)
+        compare(library.sortPopup.videoBackdropContent, backdropProbe)
+        library.sortPopup.close()
+        tryCompare(testCase, "activeBackdrops", 0)
+        library.videoBackdropContent = null
+    }
     function init() {
+        library.videoBackdropContent = null
         testCase.width = 427
         testCase.Window.window.width = 427
         testCase.height = 986

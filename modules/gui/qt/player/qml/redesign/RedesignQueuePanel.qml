@@ -12,6 +12,7 @@ Item {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property int tab: 0
     property bool floating: false
     property Component queueContent
@@ -38,6 +39,7 @@ Item {
                 onClicked: if (root.floating) viewsMenu.popup(); else if (queueBody.item) queueBody.item.openActions()
                 RedesignActionMenu {
                     id: viewsMenu
+                    videoBackdropContent: root.videoBackdropContent
                     scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                     checkedAction: String(root.tab)
                     onAboutToShow: entries = [
@@ -88,6 +90,7 @@ Item {
                 item.scaleFactor = Qt.binding(() => root.scaleFactor)
                 item.lightTheme = Qt.binding(() => root.lightTheme)
                 item.accentColor = Qt.binding(() => root.accentColor)
+                item.videoBackdropContent = Qt.binding(() => root.videoBackdropContent)
             }
         }
         RedesignChaptersView {

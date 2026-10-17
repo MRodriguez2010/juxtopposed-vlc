@@ -8,6 +8,7 @@ Item {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property var mediaModel
     readonly property int libraryMediaCount: mediaView.count
     property int itemCount: libraryMediaCount
@@ -96,6 +97,7 @@ Item {
         id: sortMenuComponent
         RedesignActionMenu {
             id: menu
+            videoBackdropContent: root.videoBackdropContent
             objectName: "librarySortMenu"
             scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
             checkedAction: sorting.selection.id
@@ -134,6 +136,7 @@ Item {
     }
     RedesignActionMenu {
         id: itemMenu
+        videoBackdropContent: root.videoBackdropContent
         objectName: "libraryItemMenu"
         property var target
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
@@ -141,6 +144,7 @@ Item {
     }
     RedesignActionMenu {
         id: moreMenu
+        videoBackdropContent: root.videoBackdropContent
         objectName: "libraryMoreMenu"
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         entries: root.locationPinTarget && root.locationPinTarget.kind === "folder" ? [
@@ -175,6 +179,7 @@ Item {
     }
     RedesignActionMenu {
         id: viewMenu
+        videoBackdropContent: root.videoBackdropContent
         objectName: "libraryViewMenu"
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         checkedAction: root.grid ? "grid" : "list"
@@ -187,6 +192,7 @@ Item {
 
     RedesignLibraryNavigation {
         id: rail
+        videoBackdropContent: root.videoBackdropContent
         objectName: "libraryNavigation"
         x: root.expanded ? theme.dp(8) : 0
         anchors.top: parent.top; anchors.bottom: parent.bottom
@@ -252,6 +258,7 @@ Item {
         color: root.theme.foreground; font.pixelSize: root.theme.dp(14)
     }
     component Location: RedesignBreadcrumbs {
+        videoBackdropContent: root.videoBackdropContent
         objectName: "libraryLocation"
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         boldCurrent: root.expanded

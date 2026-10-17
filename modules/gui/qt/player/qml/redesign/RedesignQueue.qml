@@ -8,6 +8,7 @@ FocusScope {
     property real scaleFactor: 1
     property color accentColor: "#d37918"
     property bool lightTheme: false
+    property Component videoBackdropContent
     property var queueModel
     property int itemCount: 0
     property int currentIndex: -1
@@ -166,6 +167,7 @@ FocusScope {
     }
     RedesignActionMenu {
         id: sortMenu
+        videoBackdropContent: root.videoBackdropContent
         objectName: "queueSortMenu"
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         onAboutToShow: {
@@ -180,6 +182,7 @@ FocusScope {
     }
     RedesignActionMenu {
         id: actionsMenu
+        videoBackdropContent: root.videoBackdropContent
         objectName: "queueActionsMenu"
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         onAboutToShow: entries = [

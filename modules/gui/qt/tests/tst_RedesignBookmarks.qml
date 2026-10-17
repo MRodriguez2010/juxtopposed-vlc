@@ -8,6 +8,16 @@ TestCase {
     name: "JuxtopposedBookmarks"
     width: 420; height: 600
     visible: true; when: windowShown
+    property int activeBackdrops: 0
+    Component {
+        id: backdropProbe
+        Item {
+            objectName: "contextBackdropProbe"
+            property real cornerRadius: 0
+            Component.onCompleted: testCase.activeBackdrops++
+            Component.onDestruction: testCase.activeBackdrops--
+        }
+    }
     ListModel { id: bookmarks }
     RedesignBookmarksView {
         id: view
@@ -21,7 +31,27 @@ TestCase {
     SignalSpy { id: activate; target: view; signalName: "activateRequested" }
     SignalSpy { id: rename; target: view; signalName: "renameRequested" }
     function item(name) { return findChild(view, name) }
+    function test_contextBackdropLifetime() {
+        view.videoBackdropContent = backdropProbe
+        for (const name of ["bookmarkActionsMenu"]) {
+            const menu = findChild(view, name)
+            compare(menu.videoBackdropContent, backdropProbe)
+            menu.open()
+            tryCompare(testCase, "activeBackdrops", 1)
+            const backdrop = findChild(menu.background, "contextBackdropProbe")
+            verify(backdrop !== null)
+            compare(backdrop.width, menu.background.width)
+            compare(backdrop.height, menu.background.height)
+            compare(backdrop.cornerRadius, 10)
+            for (let parent = menu.background; parent; parent = parent.parent)
+                verify(parent !== view, "The menu must stay outside its capture source.")
+            menu.close()
+            tryCompare(testCase, "activeBackdrops", 0)
+        }
+        view.videoBackdropContent = null
+    }
     function init() {
+        view.videoBackdropContent = null
         failOnWarning(/Binding loop detected/)
         bookmarks.clear()
         bookmarks.append({name: "DON’T BLINK 1", timeMS: 42023})

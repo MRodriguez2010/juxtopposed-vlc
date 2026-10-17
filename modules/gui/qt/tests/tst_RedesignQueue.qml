@@ -8,6 +8,16 @@ TestCase {
     name: "JuxtopposedQueue"
     width: 400; height: 600
     visible: true; when: windowShown
+    property int activeBackdrops: 0
+    Component {
+        id: backdropProbe
+        Item {
+            objectName: "contextBackdropProbe"
+            property real cornerRadius: 0
+            Component.onCompleted: testCase.activeBackdrops++
+            Component.onDestruction: testCase.activeBackdrops--
+        }
+    }
     ListModel { id: media }
     RedesignQueue {
         id: queue
@@ -25,7 +35,27 @@ TestCase {
     SignalSpy { id: playSpy; target: queue; signalName: "playRequested" }
     SignalSpy { id: saveSpy; target: queue; signalName: "saveRequested" }
     SignalSpy { id: clearSpy; target: queue; signalName: "clearRequested" }
+    function test_contextBackdropLifetime() {
+        queue.videoBackdropContent = backdropProbe
+        for (const name of ["queueSortMenu", "queueActionsMenu"]) {
+            const menu = findChild(queue, name)
+            compare(menu.videoBackdropContent, backdropProbe)
+            menu.open()
+            tryCompare(testCase, "activeBackdrops", 1)
+            const backdrop = findChild(menu.background, "contextBackdropProbe")
+            verify(backdrop !== null)
+            compare(backdrop.width, menu.background.width)
+            compare(backdrop.height, menu.background.height)
+            compare(backdrop.cornerRadius, 10)
+            for (let parent = menu.background; parent; parent = parent.parent)
+                verify(parent !== queue, "The menu must stay outside its capture source.")
+            menu.close()
+            tryCompare(testCase, "activeBackdrops", 0)
+        }
+        queue.videoBackdropContent = null
+    }
     function init() {
+        queue.videoBackdropContent = null
         queue.visible = true
         media.clear()
         media.append({title: "First", isCurrent: false})
