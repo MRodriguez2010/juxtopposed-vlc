@@ -108,7 +108,7 @@ RedesignSvg {
     "display": '<rect x="4" y="4" width="16" height="16" rx="2" stroke="COLOR" stroke-width="1.5"/>',
     "record": '<circle cx="12" cy="12" r="9" stroke="COLOR" stroke-width="1.5"/><circle cx="12" cy="12" r="5" stroke="COLOR" stroke-width="1.5"/>',
     "puzzle": '<path d="M4 5h5V3a3 3 0 0 1 6 0v2h5v5h1a3 3 0 0 1 0 6h-1v5h-5v-2a3 3 0 0 0-6 0v2H4v-5H2a3 3 0 0 1 0-6h2Z" stroke="COLOR" stroke-width="1.5" stroke-linejoin="round"/>',
-    "edit": "<path d=\"m5 16-1 4 4-1L20 7l-3-3Z M14 7l3 3\" fill=\"none\" stroke=\"COLOR\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>",
+    "edit": "<path d=\"M7 20H19\" stroke=\"COLOR\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />\n<path d=\"M9.24821 15.8113L14.9753 10.1806L17.7299 7.47251C18.09 7.11826 18.0901 6.54398 17.7299 6.18976L15.7728 4.26563C15.4125 3.91142 14.8284 3.91149 14.468 4.26563L11.7135 6.97376L5.98638 12.6044L5.01414 16.4367C4.92668 16.7823 5.25976 17.0874 5.60433 16.9771L9.24821 15.8113Z\" stroke=\"COLOR\" stroke-width=\"1.5\" stroke-linejoin=\"round\" />\n",
     "pause": "<path d=\"M9 6v12M15 6v12\" stroke=\"COLOR\" stroke-width=\"3\" stroke-linecap=\"round\"/>",
     "add": "<path d=\"M12 5v14M5 12h14\" stroke=\"COLOR\" stroke-width=\"1.5\" stroke-linecap=\"round\"/>",
     "back": "<path d=\"m10 7-5 5 5 5M5 12h14\" fill=\"none\" stroke=\"COLOR\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>",

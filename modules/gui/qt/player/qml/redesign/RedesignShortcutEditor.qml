@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls.Basic as C
 
 C.Popup {
@@ -32,86 +31,121 @@ C.Popup {
     signal clearRequested(string name)
     signal saveRequested()
     signal cancelRequested()
-    width: Math.min(theme.dp(1048), parent.width - theme.dp(30))
-    height: Math.min(theme.dp(800), parent.height - theme.dp(30))
-    x: (parent.width - width) / 2; y: (parent.height - height) / 2
-    padding: theme.dp(20)
+    width: Math.max(0, Math.min(theme.dp(1048), parent ? parent.width - theme.dp(30) : theme.dp(1048)))
+    height: Math.max(0, Math.min(theme.dp(800), parent ? parent.height - theme.dp(30) : theme.dp(800)))
+    x: parent ? (parent.width - width) / 2 : 0; y: parent ? (parent.height - height) / 2 : 0
+    padding: 0
     modal: true; focus: true
     closePolicy: C.Popup.NoAutoClose
     background: RedesignDialogSurface { theme: root.theme; videoBackdropContent: root.videoBackdropContent }
     onAboutToShow: { recordingName = ""; search.clear(); filter.currentIndex = 0 }
     onOpened: if (!recordingName.length) search.forceActiveFocus()
 
-    ColumnLayout {
+    contentItem: Item {
         Keys.onEscapePressed: root.cancelRequested()
-        anchors.fill: parent
-        spacing: theme.dp(16)
-        RowLayout {
-            Layout.fillWidth: true; Layout.preferredHeight: theme.dp(36); Layout.maximumHeight: theme.dp(36)
-            Text { Layout.fillWidth: true; text: qsTr("Keyboard Shortcuts"); color: theme.foreground; font.pixelSize: theme.dp(14) }
-            RedesignButton { scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; iconName: "close"; text: qsTr("Close shortcut editor"); onClicked: root.cancelRequested() }
+        Rectangle {
+            objectName: "shortcutHeader"
+            anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+            height: theme.dp(96); radius: theme.dp(14); color: theme.field
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: parent.height / 2; color: parent.color }
         }
-        RowLayout {
-            Layout.fillWidth: true; Layout.preferredHeight: theme.dp(34); Layout.maximumHeight: theme.dp(34)
+        Text {
+            x: theme.dp(20); height: theme.dp(50)
+            width: parent.width - theme.dp(80)
+            text: qsTr("Keyboard Shortcuts"); color: theme.foreground; font.pixelSize: theme.dp(14)
+            verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
+        }
+        RedesignButton {
+            objectName: "shortcutClose"
+            anchors.right: parent.right; anchors.rightMargin: theme.dp(7); y: theme.dp(7)
+            scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+            iconName: "close"; text: qsTr("Close shortcut editor"); onClicked: root.cancelRequested()
+        }
+        Item {
+            x: theme.dp(9); y: theme.dp(53); width: parent.width - theme.dp(18); height: theme.dp(34)
             C.TextField {
                 id: search
                 objectName: "shortcutSearch"
-                Layout.fillWidth: true; Layout.fillHeight: true
-                placeholderText: qsTr("Search Keyboard Shortcuts…")
-                color: theme.foreground; placeholderTextColor: theme.foreground
+                width: parent.width - filter.width - theme.dp(10); height: parent.height
+                leftPadding: theme.dp(42); rightPadding: theme.dp(10)
+                placeholderText: qsTr("Search Keyboard Shortcuts…"); Accessible.name: placeholderText
+                color: theme.foreground; placeholderTextColor: root.lightTheme ? theme.foreground : "#404040"
                 font.pixelSize: theme.dp(14); selectByMouse: true
-                background: Rectangle { radius: theme.dp(5); color: theme.panel; border.color: search.activeFocus ? theme.accent : "transparent" }
+                background: Rectangle {
+                    radius: theme.dp(6); color: root.lightTheme ? theme.field : "#151515"
+                    border.color: search.activeFocus ? theme.accent : "transparent"
+                }
+                RedesignIcon {
+                    x: theme.dp(10); anchors.verticalCenter: parent.verticalCenter
+                    width: theme.dp(20); height: width; name: "search"; color: theme.playerLabel
+                }
             }
-            C.ComboBox {
+            RedesignComboBox {
                 id: filter
-                Layout.preferredWidth: theme.dp(200); Layout.fillHeight: true
+                objectName: "shortcutFilter"
+                anchors.right: parent.right
+                width: Math.min(theme.dp(200), parent.width * 0.35); height: parent.height
+                scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                 model: [qsTr("All Fields"), qsTr("Action"), qsTr("Hotkey"), qsTr("Global Hotkey")]
-                palette.buttonText: theme.foreground; palette.text: theme.foreground; palette.base: theme.panel; palette.window: theme.panel
-                background: Rectangle { radius: theme.dp(5); color: theme.panel; border.color: filter.activeFocus ? theme.accent : "transparent" }
+                Accessible.name: qsTr("Search fields")
+                background: Rectangle {
+                    radius: theme.dp(6); color: root.lightTheme ? theme.field : "#151515"
+                    border.color: filter.visualFocus ? theme.accent : "transparent"
+                }
             }
         }
         Row {
-            Layout.fillWidth: true; Layout.preferredHeight: theme.dp(44); Layout.maximumHeight: theme.dp(44)
-            Text { width: parent.width * .376; text: qsTr("Action"); color: theme.foreground; font.pixelSize: theme.dp(14) }
-            Text { width: parent.width * .268; horizontalAlignment: Text.AlignHCenter; text: qsTr("Hotkey"); color: theme.foreground; font.pixelSize: theme.dp(14) }
+            objectName: "shortcutColumns"
+            x: theme.dp(20); y: theme.dp(120); width: parent.width - theme.dp(40); height: theme.dp(41)
+            Text { width: parent.width * .376; text: qsTr("Action"); color: theme.playerLabel; font.pixelSize: theme.dp(14) }
+            Text { width: parent.width * .268; horizontalAlignment: Text.AlignHCenter; text: qsTr("Hotkey"); color: theme.playerLabel; font.pixelSize: theme.dp(14) }
             Item { width: parent.width * .088; height: 1 }
-            Text { width: parent.width * .268; horizontalAlignment: Text.AlignHCenter; text: qsTr("Global Hotkey"); color: theme.foreground; font.pixelSize: theme.dp(14) }
+            Text { width: parent.width * .268; horizontalAlignment: Text.AlignHCenter; text: qsTr("Global Hotkey"); color: theme.playerLabel; font.pixelSize: theme.dp(14) }
         }
         ListView {
             id: list
             objectName: "shortcutList"
-            Layout.fillWidth: true; Layout.fillHeight: true
+            x: theme.dp(20); y: theme.dp(161); width: parent.width - theme.dp(40)
+            height: Math.max(0, parent.height - y - theme.dp(72))
             clip: true; model: root.filteredRows
             C.ScrollBar.vertical: C.ScrollBar { }
             delegate: Item {
                 id: row
+                objectName: "shortcutRow_" + modelData.name
                 required property int index
                 required property var modelData
                 readonly property bool groupStart: index === 0 || root.filteredRows[index - 1].group !== modelData.group
-                width: list.width; height: theme.dp(46 + (groupStart ? 56 : 0))
-                Column {
+                readonly property bool groupEnd: index === list.count - 1 || root.filteredRows[index + 1].group !== modelData.group
+                width: list.width; height: theme.dp(47 + (groupStart ? 61 : 0) + (groupEnd ? 18 : 0))
+                Item {
                     visible: row.groupStart
-                    width: parent.width
-                    Rectangle { width: parent.width; height: theme.dp(1); color: theme.border }
-                    Text { topPadding: theme.dp(20); text: row.modelData.group; color: theme.foreground; font.pixelSize: theme.dp(16) }
+                    width: parent.width; height: theme.dp(61)
+                    Rectangle { width: parent.width; height: theme.dp(1); color: root.lightTheme ? theme.border : "#222222" }
+                    Text {
+                        y: theme.dp(20); height: theme.dp(30); width: parent.width
+                        verticalAlignment: Text.AlignVCenter
+                        text: row.modelData.group; color: theme.playerHeading; font.pixelSize: theme.dp(16)
+                        elide: Text.ElideRight
+                    }
                 }
                 Row {
-                    anchors.bottom: parent.bottom; width: parent.width; height: theme.dp(42)
+                    y: row.groupStart ? theme.dp(61) : 0
+                    width: parent.width; height: theme.dp(47)
                     Text {
                         width: parent.width * .376; height: parent.height
                         verticalAlignment: Text.AlignVCenter
-                        text: row.modelData.title; color: theme.bright; font.pixelSize: theme.dp(14)
+                        text: row.modelData.title; color: theme.settingsHeading; font.pixelSize: theme.dp(14)
                         elide: Text.ElideRight; rightPadding: theme.dp(16)
                     }
                     Loader {
-                        width: parent.width * .268; height: theme.dp(34); anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width * .268; height: theme.dp(33); y: theme.dp(7)
                         property string actionName: row.modelData.title
                         property string optionName: row.modelData.name
                         sourceComponent: hotkeyCell
                     }
                     Item { width: parent.width * .088; height: 1 }
                     Loader {
-                        width: parent.width * .268; height: theme.dp(34); anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width * .268; height: theme.dp(33); y: theme.dp(7)
                         property string actionName: row.modelData.title
                         property string optionName: row.modelData.globalName
                         sourceComponent: hotkeyCell
@@ -120,11 +154,26 @@ C.Popup {
             }
             Text { anchors.centerIn: parent; visible: list.count === 0; text: qsTr("No matching shortcuts"); color: theme.foreground; font.pixelSize: theme.dp(14) }
         }
-        RowLayout {
-            Layout.fillWidth: true; Layout.preferredHeight: theme.dp(36); Layout.maximumHeight: theme.dp(36)
-            RedesignButton { objectName: "shortcutCancel"; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; caption: qsTr("Cancel"); text: caption; onClicked: root.cancelRequested() }
-            Text { Layout.fillWidth: true; text: root.errorMessage; color: "#e56b6b"; wrapMode: Text.WordWrap; font.pixelSize: theme.dp(12) }
-            RedesignButton { objectName: "shortcutSave"; scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor; caption: qsTr("Save"); text: caption; accent: true; enabled: root.dirty; onClicked: root.saveRequested() }
+        RedesignButton {
+            objectName: "shortcutCancel"
+            x: theme.dp(20); y: parent.height - theme.dp(52); width: theme.dp(100); height: theme.dp(32)
+            scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+            caption: qsTr("Cancel"); text: caption; onClicked: root.cancelRequested()
+            background: Rectangle { radius: theme.dp(6); color: parent.hovered ? theme.hover : theme.background; border.width: parent.visualFocus ? 1 : 0; border.color: theme.accent }
+        }
+        Text {
+            x: theme.dp(136); y: parent.height - theme.dp(52); width: parent.width - theme.dp(272); height: theme.dp(32)
+            text: root.errorMessage; color: "#e56b6b"; wrapMode: Text.WordWrap; font.pixelSize: theme.dp(12)
+            verticalAlignment: Text.AlignVCenter
+        }
+        RedesignButton {
+            objectName: "shortcutSave"
+            anchors.right: parent.right; anchors.rightMargin: theme.dp(20)
+            y: parent.height - theme.dp(52); width: theme.dp(100); height: theme.dp(32)
+            scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+            caption: qsTr("Save"); text: caption; enabled: root.dirty; onClicked: root.saveRequested()
+            foreground: theme.accent
+            background: Rectangle { radius: theme.dp(6); color: parent.hovered ? theme.selected : theme.progress; border.width: parent.visualFocus ? 1 : 0; border.color: theme.accent }
         }
     }
     Component {
@@ -141,16 +190,17 @@ C.Popup {
                 const extras = root.valueFor(optionName).split("\t").slice(1)
                 return extras.length ? title + "\n" + qsTr("Other bindings: %1").arg(extras.join(", ")) : title
             }
-            background: Rectangle { radius: theme.dp(5); color: theme.field; border.width: cell.recording || cell.visualFocus ? 1 : 0; border.color: theme.accent }
+            background: Rectangle { radius: theme.dp(6); color: theme.field; border.width: cell.recording || cell.visualFocus ? 1 : 0; border.color: theme.accent }
             contentItem: Text {
                 text: cell.recording ? qsTr("Press a shortcut…") : root.displayValue(cell.optionName)
-                color: cell.recording ? theme.accent : theme.bright; font.pixelSize: theme.dp(14)
+                color: cell.recording ? theme.accent : theme.settingsHeading; font.pixelSize: theme.dp(14)
                 horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight; leftPadding: theme.dp(26); rightPadding: theme.dp(26)
             }
-            RedesignIcon { anchors.right: parent.right; anchors.rightMargin: theme.dp(8); anchors.verticalCenter: parent.verticalCenter; width: theme.dp(18); height: width; name: "edit"; color: theme.foreground; visible: !clear.hovered }
+            RedesignIcon { anchors.right: parent.right; anchors.rightMargin: theme.dp(5); anchors.verticalCenter: parent.verticalCenter; width: theme.dp(24); height: width; name: "edit"; color: root.lightTheme ? theme.foreground : "#404040"; visible: !clear.visible }
             RedesignButton {
                 id: clear
+                objectName: "shortcutClear"
                 anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                 width: theme.dp(26); height: theme.dp(28)
                 scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
