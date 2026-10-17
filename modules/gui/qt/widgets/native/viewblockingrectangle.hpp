@@ -23,6 +23,9 @@
 #include <QColor>
 #include <QMatrix4x4>
 #include <QSGRenderNode>
+#include <QSGTransformNode>
+#include <functional>
+#include <cassert>
 
 // WARNING: Do not use QSGTransformNode here with preprocess, Qt does not
 //          necessarily call preprocess when the combined matrix changes!
@@ -32,13 +35,16 @@ public:
     explicit MatrixChangeObserverNode(const std::function<void(const QMatrix4x4&)>& callback)
         : m_callback(callback) { }
 
-    // Use prepare(), because matrix() returns dangling pointer when render() is called from Qt 6.2 to 6.5 (QTBUG-97589):
+    // Observe render-thread animations after synchronization. A layer renderer
+    // starts at a nested root, so its pass matrix is not in window coordinates.
     void prepare() override
     {
         QSGRenderNode::prepare(); // The documentation says that the default implementation is empty, but still call it just in case.
 
-        assert(matrix());
-        const QMatrix4x4 m = *matrix(); // matrix() is the combined matrix here
+        QMatrix4x4 m;
+        for (const QSGNode *node = parent(); node; node = node->parent())
+            if (node->type() == QSGNode::TransformNodeType)
+                m = static_cast<const QSGTransformNode *>(node)->matrix() * m;
         if (m_lastCombinedMatrix != m)
         {
             m_callback(m);

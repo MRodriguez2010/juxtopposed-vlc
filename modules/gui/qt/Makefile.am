@@ -1892,6 +1892,17 @@ QT_QTEST_COMMON_cxxflags = $(AM_CXXFLAGS) $(QT_CFLAGS) $(QT_QTEST_CFLAGS) -fPIC 
 QT_QTEST_COMMON_ldadd = $(QT_LIBS) $(LIBS_qt) $(QT_QTEST_LIBS) $(LIBVLCCORE) $(LIBVLC)
 QT_QTEST_COMMON_ldflags = $(AM_LDFLAGS) $(QT_LDFLAGS) $(QT_QTEST_LDFLAGS)
 
+test_viewblockingrectangle_SOURCES = tests/test_viewblockingrectangle.cpp widgets/native/viewblockingrectangle.cpp widgets/native/viewblockingrectangle.hpp
+nodist_test_viewblockingrectangle_SOURCES = tests/test_viewblockingrectangle.moc widgets/native/viewblockingrectangle.moc.cpp
+BUILT_SOURCES += tests/test_viewblockingrectangle.moc
+CLEANFILES += tests/test_viewblockingrectangle.moc
+test_viewblockingrectangle_CPPFLAGS = $(QT_QTEST_COMMON_cppflags)
+test_viewblockingrectangle_CXXFLAGS = $(QT_QTEST_COMMON_cxxflags)
+test_viewblockingrectangle_LDADD = $(QT_QTEST_COMMON_ldadd)
+test_viewblockingrectangle_LDFLAGS = $(QT_QTEST_COMMON_ldflags)
+check_PROGRAMS += test_viewblockingrectangle
+TESTS += test_viewblockingrectangle
+
 test_cover_generator_SOURCES = tests/test_cover_generator.cpp util/covergenerator.cpp util/covergenerator.hpp
 nodist_test_cover_generator_SOURCES = tests/test_cover_generator.moc
 BUILT_SOURCES += tests/test_cover_generator.moc

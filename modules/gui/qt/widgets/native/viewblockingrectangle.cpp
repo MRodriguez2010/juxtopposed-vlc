@@ -24,6 +24,7 @@
 #include <QSGRectangleNode>
 #include <QSGMaterial>
 #include <QSGRenderNode>
+#include <QQmlInfo>
 
 class SoftwareRenderNode : public QSGRenderNode
 {

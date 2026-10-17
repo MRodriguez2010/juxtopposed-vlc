@@ -1444,6 +1444,15 @@ if qt6_dep.found()
     qtest_qt6_dep = dependency('qt6', version: '=' + qt6_dep.version(), modules: ['Test'], required: false)
     if qtest_qt6_dep.found()
         vlc_tests += {
+            'name': 'test_qt_viewblockingrectangle',
+            'sources': files('tests/test_viewblockingrectangle.cpp', 'widgets/native/viewblockingrectangle.cpp'),
+            'moc_sources': files('tests/test_viewblockingrectangle.cpp'),
+            'moc_headers': files('widgets/native/viewblockingrectangle.hpp'),
+            'suite': ['qt'],
+            'include_directories': qt_include_dir,
+            'dependencies': [qt6_dep, qt_extra_deps, qtest_qt6_dep],
+        }
+        vlc_tests += {
             'name': 'test_qt_track_folder_rules',
             'sources': files('tests/test_track_folder_rules.cpp', '../../misc/medialibrary/track_rule_store.cpp'),
             'moc_sources': files('tests/test_track_folder_rules.cpp'),
