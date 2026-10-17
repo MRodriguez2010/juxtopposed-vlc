@@ -65,6 +65,11 @@ ShaderEffect {
     // Do not paint in the non-compensated inner area - only makes sense if there is compensation:
     property bool hollow: false
 
+    // Optional rounded area to leave clear, in this item's logical coordinates.
+    // Unlike hollow, this can exclude a surface at a different offset from its shadow.
+    property rect exclusionRect: Qt.rect(0, 0, 0, 0)
+    property real exclusionRadius: 0
+
     blending: true
 
     supportsAtlasTextures: true // irrelevant, but nevertheless...

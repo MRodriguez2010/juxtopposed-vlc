@@ -80,10 +80,13 @@ import QtQuick.Window
 import BackdropTest 1.0
 import "%1" as Widgets
 Window {
-    visible: true; width: 512; height: 512; color: testAlphaWindow ? "transparent" : "black"
+    visible: true; width: 512; height: 512
+    color: shadowTest ? "white" : testAlphaWindow ? "transparent" : "black"
+    property bool shadowTest: false
     property int pattern: 0
     Item {
         id: underlay
+        visible: !shadowTest
         anchors.fill: parent
         Rectangle { anchors.fill: parent; color: "black" }
         Rectangle {
@@ -97,9 +100,26 @@ Window {
     }
     Widgets.BackdropBlur {
         objectName: "surface"
+        visible: !shadowTest
         x: 128; y: 128; width: 256; height: 256
         sourceItem: underlay
         radius: 25; cornerRadius: 10
+    }
+    Item {
+        id: shadowCard
+        objectName: "shadowCard"
+        visible: shadowTest
+        x: 128; y: 128; width: 256; height: 200
+        Widgets.RoundedRectangleShadow {
+            objectName: "referenceMenuShadow"
+            anchors.alignWhenCentered: false
+            blurRadius: 7.5; yOffset: 8; radius: 10
+            color: Qt.rgba(0, 0, 0, 0.46)
+            exclusionRect: Qt.rect(blurRadius * compensationFactor,
+                                   blurRadius * compensationFactor - yOffset,
+                                   shadowCard.width, shadowCard.height)
+            exclusionRadius: radius
+        }
     }
 }
 )").arg(path.toString()).toUtf8(), QUrl("qrc:/backdrop-blur-test.qml"));
@@ -164,6 +184,56 @@ Window {
             const auto square = window->grabWindow();
             return !square.isNull() && pixel(square, 129, 129).red() > 60;
         })());
+    }
+
+    void referenceMenuShadow()
+    {
+        root->setProperty("shadowTest", true);
+        auto *shadow = root->findChild<QQuickItem *>("referenceMenuShadow");
+        auto *card = root->findChild<QQuickItem *>("shadowCard");
+        QVERIFY(shadow && card);
+        QCOMPARE(shadow->x(), -22.5);
+        QCOMPARE(shadow->y(), -14.5);
+        QImage image;
+        QTRY_VERIFY(([&] {
+            image = window->grabWindow();
+            return !image.isNull() && pixel(image, 256, 329).red() < 200;
+        })());
+        // The exclusion follows the unshifted rounded panel, not its shadow.
+        QCOMPARE(pixel(image, 256, 130).red(), 255);
+        QCOMPARE(pixel(image, 256, 228).red(), 255);
+        QCOMPARE(pixel(image, 134, 134).red(), 255);
+        QVERIFY(pixel(image, 130, 130).red() < 254);
+        QVERIFY(pixel(image, 256, 370).red() >= 254);
+        const qreal ratio = qreal(image.width()) / window->width();
+        for (int y : {329, 337, 345, 353})
+        {
+            // A long straight edge is a Gaussian step: sigma7.5, offset8,
+            // opacity0.46, as specified by the menu SVG's drop-shadow filter.
+            const double alpha = 0.46 * 0.5 * std::erfc((y + 0.5 / ratio - 336) / (std::sqrt(2.) * 7.5));
+            const double expected = 255 * (1 - alpha);
+            const int actual = pixel(image, 256, y).red();
+            QVERIFY2(qAbs(actual - expected) < 3,
+                     qPrintable(QString("y=%1 actual=%2 expected=%3").arg(y).arg(actual).arg(expected)));
+        }
+        card->setWidth(160);
+        QTRY_VERIFY(([&] {
+            image = window->grabWindow();
+            return !image.isNull() && pixel(image, 289, 228).red() < 225;
+        })());
+        QCOMPARE(pixel(image, 280, 228).red(), 255);
+        // Existing users without an exclusion keep the filled/hollow behavior.
+        shadow->setProperty("exclusionRect", QRectF());
+        QTRY_VERIFY(([&] {
+            image = window->grabWindow();
+            return !image.isNull() && pixel(image, 208, 228).red() < 145;
+        })());
+        shadow->setProperty("hollow", true);
+        QTRY_VERIFY(([&] {
+            image = window->grabWindow();
+            return !image.isNull() && pixel(image, 208, 228).red() == 255;
+        })());
+        QVERIFY(pixel(image, 208, 340).red() < 250);
     }
 
     void transparentVideoHole()

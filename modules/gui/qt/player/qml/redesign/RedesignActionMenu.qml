@@ -28,8 +28,11 @@ C.Menu {
             z: -1
             active: root.visible
             sourceComponent: root.videoBackdropContent
-            onLoaded: if (item.cornerRadius !== undefined)
-                item.cornerRadius = Qt.binding(() => surface.radius)
+            onLoaded: {
+                if (item.cornerRadius !== undefined)
+                    item.cornerRadius = Qt.binding(() => surface.radius)
+                if (item.menuShadow !== undefined) item.menuShadow = true
+            }
         }
     }
     Instantiator {

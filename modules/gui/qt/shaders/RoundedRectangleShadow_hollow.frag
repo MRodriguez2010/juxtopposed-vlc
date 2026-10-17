@@ -48,6 +48,8 @@ layout(std140, binding = 0) uniform buf {
 
   vec2 size;
   vec4 color;
+  vec4 exclusionRect;
+  float exclusionRadius;
 };
 
 // Evan Wallace's Fast Rounded Rectangle Shadows
@@ -115,6 +117,18 @@ void main()
       discard;
 #endif
 
+    float coverage = 1.0;
+    if (exclusionRect.z > 0.0 && exclusionRect.w > 0.0) {
+        float r = clamp(exclusionRadius, 0.0, min(exclusionRect.z, exclusionRect.w) * 0.5);
+        vec2 q = abs(denormalCoord - exclusionRect.xy - exclusionRect.zw * 0.5)
+                 - exclusionRect.zw * 0.5 + vec2(r);
+        float distance = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - r;
+        float aa = max(fwidth(distance), 0.0001);
+        coverage = smoothstep(-aa * 0.5, aa * 0.5, distance);
+        if (coverage <= 0.0)
+            discard;
+    }
+
     float shadow = roundedBoxShadow(compensatedOffset,
                                     size - compensatedOffset,
                                     denormalCoord,
@@ -128,4 +142,5 @@ void main()
     vec4 noise = vec4(r,r,r,r) * DITHERING_STRENGTH;
     fragColor += noise * step(DITHERING_CUTOFF, fragColor.a); // additive
 #endif
+    fragColor *= coverage;
 }

@@ -15,6 +15,7 @@ TestCase {
         Item {
             objectName: "menuBackdropProbe"
             property real cornerRadius: 0
+            property bool menuShadow: false
             Component.onCompleted: testCase.activeBackdrops++
             Component.onDestruction: testCase.activeBackdrops--
         }
@@ -100,6 +101,7 @@ TestCase {
             compare(backdrop.width, popup.background.width)
             compare(backdrop.height, popup.background.height)
             compare(backdrop.cornerRadius, popup.background.radius)
+            compare(backdrop.menuShadow, true)
             compare(popup.background.opacity, 1)
             fuzzyCompare(popup.background.color.a, 0.95, 0.001)
         }

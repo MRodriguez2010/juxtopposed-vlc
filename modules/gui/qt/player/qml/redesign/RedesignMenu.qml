@@ -55,8 +55,11 @@ C.Menu {
             z: -1
             active: surface.shown
             sourceComponent: root.videoBackdropContent
-            onLoaded: if (item.cornerRadius !== undefined)
-                item.cornerRadius = Qt.binding(() => surface.radius)
+            onLoaded: {
+                if (item.cornerRadius !== undefined)
+                    item.cornerRadius = Qt.binding(() => surface.radius)
+                if (item.menuShadow !== undefined) item.menuShadow = true
+            }
         }
     }
 

@@ -15,6 +15,7 @@ TestCase {
         Item {
             objectName: "contextBackdropProbe"
             property real cornerRadius: 0
+            property bool menuShadow: false
             Component.onCompleted: testCase.activeBackdrops++
             Component.onDestruction: testCase.activeBackdrops--
         }
@@ -88,6 +89,7 @@ TestCase {
             compare(backdrop.width, menu.background.width)
             compare(backdrop.height, menu.background.height)
             compare(backdrop.cornerRadius, 10)
+            compare(backdrop.menuShadow, true)
             for (let parent = menu.background; parent; parent = parent.parent)
                 verify(parent !== library, "The menu must stay outside its capture source.")
             menu.close()
