@@ -327,13 +327,13 @@ ColumnLayout {
     RedesignFilterSection {
         id: cropSection
         objectName: "videoCropSection"
-        Layout.fillWidth: true; label: qsTr("Crop")
+        Layout.fillWidth: true; label: qsTr("Crop"); contentTopMargin: 6
         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
         settings: ColumnLayout {
             id: cropSettings
             property bool linkVertical: false
             property bool linkHorizontal: false
-            spacing: theme.dp(14)
+            spacing: theme.dp(16)
             Repeater {
                 model: [[{label: qsTr("Top"), side: 1}, {label: qsTr("Bottom"), side: 3}], [{label: qsTr("Left"), side: 0}, {label: qsTr("Right"), side: 2}]]
                 RowLayout {
@@ -344,14 +344,23 @@ ColumnLayout {
                         model: parent.modelData
                         C.TextField {
                             required property var modelData
+                            id: borderField
                             objectName: "videoCropBorder_" + modelData.side
                             Layout.fillWidth: true; Layout.preferredWidth: 1
-                            implicitHeight: theme.dp(34); leftPadding: theme.dp(12); rightPadding: theme.dp(8)
-                            color: theme.foreground; font.pixelSize: theme.dp(14)
+                            implicitHeight: theme.dp(33); leftPadding: theme.dp(60); rightPadding: theme.dp(28)
+                            color: activeFocus ? theme.foreground : "transparent"; font.pixelSize: theme.dp(14)
                             Binding on text { restoreMode: Binding.RestoreNone; when: !activeFocus; value: root.borders()[modelData.side] + " px" }
-                            horizontalAlignment: TextInput.AlignRight
+                            horizontalAlignment: TextInput.AlignHCenter
                             leftInset: 0; rightInset: 0
-                            background: Rectangle { radius: theme.dp(4); color: theme.field; border.color: parent.activeFocus ? theme.accent : "transparent" }
+                            background: Rectangle { radius: theme.dp(6); color: theme.field; border.color: parent.activeFocus ? theme.accent : "transparent" }
+                            Text {
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                                anchors.leftMargin: borderField.leftPadding; anchors.rightMargin: borderField.rightPadding
+                                visible: !borderField.activeFocus; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
+                                color: theme.foreground; font: borderField.font; textFormat: Text.StyledText
+                                text: root.borders()[modelData.side] + ' <font color="' + (root.lightTheme ? theme.foreground : "#404040") + '">px</font>'
+                                Accessible.ignored: true
+                            }
                             Text { anchors.left: parent.left; anchors.leftMargin: theme.dp(12); anchors.verticalCenter: parent.verticalCenter; text: parent.modelData.label; color: theme.playerLabel; font: parent.font }
                             onActiveFocusChanged: if (activeFocus) selectAll()
                             onEditingFinished: {
@@ -363,14 +372,18 @@ ColumnLayout {
                         }
                     }
                     RedesignButton {
+                        id: cropLink
                         objectName: "videoCropLink_" + index
-                        Layout.preferredWidth: theme.dp(30); Layout.preferredHeight: theme.dp(34)
+                        Layout.preferredWidth: theme.dp(30); Layout.preferredHeight: theme.dp(33)
                         scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                         text: index === 0 ? qsTr("Link top and bottom") : qsTr("Link left and right")
                         selected: index === 0 ? cropSettings.linkVertical : cropSettings.linkHorizontal
-                        contentItem: RedesignSvg {
-                            sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-                            svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 7H7a5 5 0 0 0 0 10h2m6-10h2a5 5 0 0 1 0 10h-2' + (parent.selected ? 'M8 12h8' : '') + '" fill="none" stroke="' + (parent.selected ? theme.accent : theme.foreground) + '" stroke-width="1.5" stroke-linecap="round"/></svg>'
+                        contentItem: Item {
+                            RedesignIcon {
+                                anchors.centerIn: parent; width: theme.dp(24); height: theme.dp(24)
+                                name: cropLink.selected ? "link-active" : "link"
+                                color: cropLink.selected ? theme.accent : theme.foreground
+                            }
                         }
                         onClicked: { if (index === 0) cropSettings.linkVertical = !cropSettings.linkVertical; else cropSettings.linkHorizontal = !cropSettings.linkHorizontal }
                     }
@@ -386,50 +399,62 @@ ColumnLayout {
             spacing: 0
             Repeater {
                 model: [{label: qsTr("Color Extraction"), name: "extract", option: "extract-component"}, {label: qsTr("Color Threshold"), name: "colorthres", option: "colorthres-color"}]
-                ColumnLayout {
+                Item {
+                    id: colorGroup
                     required property var modelData
-                    Layout.fillWidth: true; Layout.bottomMargin: modelData.name === "extract" ? theme.dp(20) : theme.dp(12); spacing: theme.dp(12)
-                    GridLayout {
-                        columns: root.width < theme.dp(320) ? 2 : 3
-                        columnSpacing: theme.dp(10); rowSpacing: theme.dp(10)
-                        Layout.fillWidth: true; Layout.minimumHeight: theme.dp(52)
-                        Text { Layout.columnSpan: parent.columns === 2 ? 2 : 1; Layout.fillWidth: true; text: modelData.label; color: theme.playerLabel; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
-                        C.TextField {
-                            id: colorField
-                            objectName: "videoColor_" + modelData.name
-                            Layout.fillWidth: parent.columns === 2; Layout.minimumWidth: 0; Layout.preferredWidth: theme.dp(112); implicitHeight: theme.dp(34)
-                            leftPadding: theme.dp(12); rightPadding: theme.dp(32)
-                            Binding on text { restoreMode: Binding.RestoreNone; when: !colorField.activeFocus; value: "#" + Number(root.current(modelData.option)).toString(16).padStart(6, "0").toUpperCase() }
-                            color: theme.foreground; font.pixelSize: theme.dp(14)
-                            background: Rectangle { radius: theme.dp(4); color: theme.field; border.color: parent.activeFocus ? theme.accent : "transparent" }
-                            onEditingFinished: {
-                                const input = text.trim().replace(/^#/, "")
-                                if (/^[0-9a-fA-F]{6}$/.test(input)) root.backend.stage(modelData.option, parseInt(input, 16))
-                                text = "#" + Number(root.current(modelData.option)).toString(16).padStart(6, "0").toUpperCase()
+                    Layout.fillWidth: true; Layout.bottomMargin: modelData.name === "extract" ? theme.dp(20) : theme.dp(12)
+                    implicitHeight: colorOptions.implicitHeight
+                    ColumnLayout {
+                        id: colorOptions
+                        width: parent.width; spacing: theme.dp(12)
+                        GridLayout {
+                            columns: root.width < theme.dp(320) ? 2 : 3
+                            columnSpacing: theme.dp(8); rowSpacing: theme.dp(10)
+                            Layout.fillWidth: true; Layout.minimumHeight: theme.dp(52)
+                            Text { Layout.columnSpan: parent.columns === 2 ? 2 : 1; Layout.fillWidth: true; text: modelData.label; color: theme.playerLabel; font.pixelSize: theme.dp(14); wrapMode: Text.WordWrap }
+                            C.TextField {
+                                id: colorField
+                                objectName: "videoColor_" + modelData.name
+                                Layout.fillWidth: parent.columns === 2; Layout.minimumWidth: 0; Layout.preferredWidth: theme.dp(116); implicitHeight: theme.dp(32)
+                                leftPadding: theme.dp(12); rightPadding: theme.dp(32)
+                                Binding on text { restoreMode: Binding.RestoreNone; when: !colorField.activeFocus; value: "#" + Number(root.current(modelData.option)).toString(16).padStart(6, "0").toUpperCase() }
+                                color: theme.playerLabel; font.pixelSize: theme.dp(14)
+                                background: Rectangle { radius: theme.dp(6); color: theme.field; border.color: parent.activeFocus ? theme.accent : "transparent" }
+                                onEditingFinished: {
+                                    const input = text.trim().replace(/^#/, "")
+                                    if (/^[0-9a-fA-F]{6}$/.test(input)) root.backend.stage(modelData.option, parseInt(input, 16))
+                                    text = "#" + Number(root.current(modelData.option)).toString(16).padStart(6, "0").toUpperCase()
+                                }
+                                Accessible.name: modelData.label
+                                RedesignButton {
+                                    anchors.right: parent.right; anchors.rightMargin: theme.dp(5); anchors.verticalCenter: parent.verticalCenter
+                                    width: theme.dp(22); height: width
+                                    scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
+                                    text: qsTr("Choose %1 color").arg(modelData.label)
+                                    background: Rectangle { radius: theme.dp(2); color: colorField.text; border.width: theme.dp(1.5); border.color: parent.visualFocus ? theme.accent : Qt.rgba(1, 1, 1, .21) }
+                                    onClicked: { const color = root.backend.chooseColor(colorField.text); if (color) root.backend.stage(modelData.option, parseInt(color.replace(/^#/, ""), 16)) }
+                                }
                             }
-                            Accessible.name: modelData.label
-                            RedesignButton {
-                                anchors.right: parent.right; anchors.rightMargin: theme.dp(5); anchors.verticalCenter: parent.verticalCenter
-                                width: theme.dp(22); height: width
-                                scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
-                                text: qsTr("Choose %1 color").arg(modelData.label)
-                                background: Rectangle { radius: theme.dp(2); color: colorField.text; border.color: parent.visualFocus ? theme.accent : theme.border }
-                                onClicked: { const color = root.backend.chooseColor(colorField.text); if (color) root.backend.stage(modelData.option, parseInt(color.replace(/^#/, ""), 16)) }
-                            }
+                            FilterSwitch { Layout.fillWidth: false; Layout.preferredWidth: theme.dp(68); label: ""; accessibleName: modelData.label; filterName: modelData.name }
                         }
-                        FilterSwitch { Layout.fillWidth: false; Layout.preferredWidth: theme.dp(64); label: ""; accessibleName: modelData.label; filterName: modelData.name }
+                        FilterSlider { Layout.topMargin: -theme.dp(3); Layout.bottomMargin: theme.dp(7); visible: modelData.name === "colorthres"; label: qsTr("Saturation"); optionName: "colorthres-saturationthres"; from: 0; to: 100; stepSize: 1 }
+                        FilterSlider { Layout.bottomMargin: theme.dp(16); visible: modelData.name === "colorthres"; label: qsTr("Similarity"); optionName: "colorthres-similaritythres"; from: 0; to: 100; stepSize: 1 }
                     }
-                    FilterSlider { Layout.topMargin: -theme.dp(8); Layout.bottomMargin: theme.dp(8); visible: modelData.name === "colorthres"; label: qsTr("Saturation"); optionName: "colorthres-saturationthres"; from: 0; to: 100; stepSize: 1 }
-                    FilterSlider { Layout.bottomMargin: theme.dp(16); visible: modelData.name === "colorthres"; label: qsTr("Similarity"); optionName: "colorthres-similaritythres"; from: 0; to: 100; stepSize: 1 }
+                    Rectangle {
+                        x: -theme.dp(16); y: parent.height + (modelData.name === "extract" ? theme.dp(9) : 0)
+                        width: parent.width + theme.dp(32); height: theme.dp(1)
+                        color: root.lightTheme ? theme.border : "#222222"
+                    }
                 }
             }
             FilterSwitch { label: qsTr("Negate Colors"); filterName: "invert" }
+            Rectangle { Layout.fillWidth: true; Layout.leftMargin: -theme.dp(16); Layout.rightMargin: -theme.dp(16); Layout.topMargin: -theme.dp(1); height: theme.dp(1); color: root.lightTheme ? theme.border : "#222222" }
             FilterSwitch { label: qsTr("Posterize"); filterName: "posterize" }
-            Rectangle { Layout.fillWidth: true; Layout.topMargin: theme.dp(6); height: theme.dp(1); color: theme.border }
+            Rectangle { Layout.fillWidth: true; Layout.leftMargin: -theme.dp(16); Layout.rightMargin: -theme.dp(16); Layout.topMargin: -theme.dp(1); height: theme.dp(1); color: root.lightTheme ? theme.border : "#222222" }
             FilterSwitch { label: qsTr("Gradient"); filterName: "gradient" }
             RedesignComboBox {
                 objectName: "videoGradientMode"
-                Layout.fillWidth: true; Layout.topMargin: theme.dp(7); implicitHeight: theme.dp(46)
+                Layout.fillWidth: true; Layout.topMargin: theme.dp(11); implicitHeight: theme.dp(46)
                 scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor
                 model: root.backend.describe("gradient-mode").choices || []; textRole: "label"; valueRole: "value"
                 currentIndex: model.findIndex(row => row.value === root.current("gradient-mode"))
@@ -450,7 +475,8 @@ ColumnLayout {
                     }
                 }
             }
-            FilterSlider { objectName: "videoSepia"; Layout.topMargin: theme.dp(20); label: qsTr("Sepia Intensity"); optionName: "sepia-intensity"; from: 0; to: 255; stepSize: 1; ticks: [0, 85, 170, 255] }
+            Rectangle { Layout.fillWidth: true; Layout.leftMargin: -theme.dp(16); Layout.rightMargin: -theme.dp(16); Layout.topMargin: theme.dp(4); height: theme.dp(1); color: root.lightTheme ? theme.border : "#222222" }
+            FilterSlider { objectName: "videoSepia"; Layout.topMargin: theme.dp(21); label: qsTr("Sepia Intensity"); optionName: "sepia-intensity"; from: 0; to: 255; stepSize: 1; ticks: [0, 85, 170, 255] }
         }
     }
     RedesignFilterSection {
