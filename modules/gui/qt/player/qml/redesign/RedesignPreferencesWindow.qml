@@ -32,6 +32,15 @@ Window {
     readonly property RedesignTheme theme: RedesignTheme { scaleFactor: root.scaleFactor; lightTheme: root.lightTheme; accentColor: root.accentColor }
     RedesignPreferences { id: preferenceStore; ctx: MainCtx; autoSave: true }
     RedesignPreferencesCatalog { id: specification }
+    RedesignWindowBackdrop {
+        id: windowBackdrop
+        backend: MainCtx
+        window: root
+        enabled: MainCtx.backdropBlurEnabled
+        clipRect: Qt.rect(content.x, content.y, content.width, content.height)
+        cornerRadius: theme.dp(14)
+        darkTheme: !root.lightTheme
+    }
     RedesignConfirmationDialog {
         id: resetDialog
         parent: content
@@ -102,10 +111,15 @@ Window {
         anchors.fill: parent
         anchors.margins: theme.dp(15)
         focus: true
-        Rectangle { anchors.fill: parent; color: theme.panel; radius: theme.dp(15) }
+        RedesignWindowSurface {
+            objectName: "preferencesWindowSurface"
+            anchors.fill: parent
+            theme: root.theme
+            backdropActive: windowBackdrop.active
+        }
         Rectangle {
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
-            height: theme.dp(50); radius: theme.dp(10); color: theme.field
+            height: theme.dp(50); radius: theme.dp(14); color: theme.field
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: parent.height / 2; color: parent.color }
         }
         Keys.onEscapePressed: root.closeSettings()

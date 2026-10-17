@@ -84,6 +84,7 @@ class MainCtxWin32 : public MainCtx
     Q_PROPERTY(bool disableVolumeKeys READ getDisableVolumeKeys NOTIFY disableVolumeKeysChanged FINAL)
 public:
     explicit MainCtxWin32(qt_intf_t *);
+    bool setWindowBackdrop(QWindow*, bool, const QRectF&, qreal, bool) override;
     virtual ~MainCtxWin32() = default;
 
 public:

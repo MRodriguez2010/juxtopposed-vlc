@@ -35,6 +35,8 @@
 
 #include <QBitmap>
 #include <QTimer>
+#include <QPainterPath>
+#include <QRegion>
 
 #include <cassert>
 
@@ -819,6 +821,45 @@ void WinTaskbarWidget::changeThumbbarButtons( )
 }
 
 // MainInterface
+
+bool MainCtxWin32::setWindowBackdrop(QWindow *window, bool enabled, const QRectF &bounds,
+                                    qreal radius, bool dark)
+{
+    if (!window || window == intfMainWindow()
+        || QOperatingSystemVersion::current()
+            < QOperatingSystemVersion(QOperatingSystemVersion::Windows, 10, 0, 22621))
+        return false;
+    if (!window->handle())
+    {
+        if (!enabled) return false;
+        window->create();
+    }
+    const auto hwnd = reinterpret_cast<HWND>(window->winId());
+    const auto disable = [window, hwnd]() {
+        const int none = 1;
+        DwmSetWindowAttribute(hwnd, 38 /* DWMWA_SYSTEMBACKDROP_TYPE */, &none, sizeof(none));
+        const MARGINS margins {};
+        DwmExtendFrameIntoClientArea(hwnd, &margins);
+        window->setMask({});
+        return false;
+    };
+    if (!enabled || bounds.isEmpty()) return disable();
+
+    const BOOL darkMode = dark;
+    DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &darkMode, sizeof(darkMode));
+    const MARGINS margins {-1, -1, -1, -1};
+    if (FAILED(DwmExtendFrameIntoClientArea(hwnd, &margins))) return disable();
+    const int acrylic = 3; // DWMSBT_TRANSIENTWINDOW
+    if (FAILED(DwmSetWindowAttribute(hwnd, 38 /* DWMWA_SYSTEMBACKDROP_TYPE */, &acrylic, sizeof(acrylic))))
+        return disable();
+
+    // Keep the system material out of the transparent margins around the card.
+    QPainterPath outline;
+    outline.addRoundedRect(bounds, radius, radius);
+    const QRegion mask(outline.toFillPolygon().toPolygon());
+    if (window->mask() != mask) window->setMask(mask);
+    return true;
+}
 
 MainCtxWin32::MainCtxWin32(qt_intf_t * _p_intf )
     : MainCtx( _p_intf )
