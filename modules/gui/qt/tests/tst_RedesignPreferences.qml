@@ -412,6 +412,16 @@ TestCase {
         compare(actionSpy.signalArguments[0][0], "folderAction")
         compare(store.revision, revision)
     }
+    Component { id: deferredSubtitleSetup; RedesignSubtitleProviderSetup { } }
+    function test_subtitleSetupCanWaitForTheSettingsOverlay() {
+        const setup = createTemporaryObject(deferredSubtitleSetup, testCase, {parent: null})
+        verify(setup !== null)
+        compare(setup.width, 560)
+        setup.parent = testCase
+        setup.open(); tryCompare(setup, "opened", true)
+        verify(findChild(setup, "subtitleProviderApiKey").activeFocus)
+        setup.close(); tryCompare(setup, "visible", false)
+    }
     function test_spatialModeRetainsChoiceWhileDisabled() {
         spatialModeRow.visible = true
         const choice = findChild(spatialModeRow, "preferenceChoiceEditor")

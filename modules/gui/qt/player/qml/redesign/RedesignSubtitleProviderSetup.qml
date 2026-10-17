@@ -17,7 +17,7 @@ C.Popup {
     signal removeRequested()
     signal helpRequested()
     anchors.centerIn: parent
-    width: Math.min(theme.dp(560), parent.width - theme.dp(32))
+    width: Math.min(theme.dp(560), parent ? parent.width - theme.dp(32) : theme.dp(560))
     padding: theme.dp(20); modal: true; focus: true
     function finish(success, error = "") {
         if (success) close()
