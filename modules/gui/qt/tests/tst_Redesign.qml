@@ -17,6 +17,7 @@ TestCase {
         id: backdropProbe
         Item {
             objectName: "backdropProbe"
+            property real cornerRadius: 0
             Component.onCompleted: testCase.activeBackdrops++
             Component.onDestruction: testCase.activeBackdrops--
         }
@@ -670,6 +671,29 @@ TestCase {
         verify(player.position > before)
     }
     readonly property url previewFixture: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAIAAAC0SDtlAAAAFUlEQVR4nGP8z0AaYCJR/agG2mgAAMeRARHH28OHAAAAAElFTkSuQmCC"
+    function test_seekBackdropFollowsPreviewLifetime_data() {
+        return [{tag: "player", mini: false}, {tag: "mini-player", mini: true}]
+    }
+    function test_seekBackdropFollowsPreviewLifetime(data) {
+        player.videoBackdropContent = backdropProbe
+        player.libraryOpen = data.mini
+        player.libraryExpanded = data.mini
+        const slider = findChild(player, data.mini ? "miniPlayerSeekBar" : "seekBar")
+        const popup = findChild(slider, "seekThumbnailPopup")
+        mouseMove(slider, slider.width / 2, slider.height / 2)
+        tryVerify(() => previewSpy.count > 0)
+        player.seekPreviewImagePosition = slider.previewPosition
+        player.seekPreviewImage = previewFixture
+        tryCompare(popup, "visible", true)
+        tryCompare(testCase, "activeBackdrops", 1)
+        const backdrop = findChild(popup.background, "backdropProbe")
+        verify(backdrop !== null)
+        compare(backdrop.width, popup.width)
+        compare(backdrop.height, popup.height)
+        compare(backdrop.cornerRadius, 14)
+        player.showSeekPreview = false
+        tryCompare(testCase, "activeBackdrops", 0)
+    }
     function test_seekPreviewCanBeTurnedOffAndOn() {
         const slider = findChild(player, "seekBar")
         const popup = findChild(slider, "seekThumbnailPopup")

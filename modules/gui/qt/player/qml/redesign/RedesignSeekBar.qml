@@ -12,6 +12,7 @@ T.Slider {
     property bool previewEnabled: false
     property url previewImage
     property Component thumbnailContent
+    property Component videoBackdropContent
     Component {
         id: defaultThumbnail
         Image {
@@ -255,6 +256,14 @@ T.Slider {
         background: Rectangle {
             radius: root.theme.dp(14)
             color: root.lightTheme ? Qt.rgba(root.theme.panel.r, root.theme.panel.g, root.theme.panel.b, 0.95) : Qt.rgba(25 / 255, 25 / 255, 25 / 255, 0.95)
+            Loader {
+                anchors.fill: parent
+                z: -1
+                active: preview.visible
+                sourceComponent: root.videoBackdropContent
+                onLoaded: if (item && item.cornerRadius !== undefined)
+                    item.cornerRadius = Qt.binding(() => root.theme.dp(14))
+            }
         }
         contentItem: Item {
             Rectangle {

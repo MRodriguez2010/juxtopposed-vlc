@@ -22,6 +22,7 @@ Rectangle {
     property bool canBrowseMedia: true
     property url previewImage
     property Component thumbnailContent
+    property Component videoBackdropContent
     property real previewImagePosition: -1
     property var timeForPosition: function(position) { return "" }
     property bool userMoved: false
@@ -128,6 +129,7 @@ Rectangle {
         mediaStarted: root.started; playerPosition: root.position
         previewEnabled: root.previewEnabled && root.hasVideo && root.started
         thumbnailContent: root.thumbnailContent
+        videoBackdropContent: root.videoBackdropContent
         previewImage: root.previewImage; previewImagePosition: root.previewImagePosition
         timeForPosition: root.timeForPosition
         onSeekRequested: position => root.seekRequested(position)

@@ -345,6 +345,7 @@ FocusScope {
         minimumY: Math.min(root.height - height - theme.dp(6), theme.dp(46) + (root.floatingQueue ? theme.dp(356) : 0))
         previewEnabled: root.showSeekPreview && !root.presentationOnly
         thumbnailContent: root.seekThumbnailContent
+        videoBackdropContent: root.videoBackdropContent
         previewImage: root.seekPreviewImage; previewImagePosition: root.seekPreviewImagePosition
         timeForPosition: root.timeForPosition
         onTogglePlayback: root.togglePlayback()
@@ -580,6 +581,7 @@ FocusScope {
                 timeForPosition: root.timeForPosition
                 previewEnabled: root.showSeekPreview && root.started && root.hasVideo && !root.presentationOnly
                 thumbnailContent: root.seekThumbnailContent
+                videoBackdropContent: root.videoBackdropContent
                 previewImage: root.seekPreviewImage
                 previewImagePosition: root.seekPreviewImagePosition
                 timelineEnabled: root.showSubtitleTimeline
